@@ -15,6 +15,7 @@ func TestServicesEnableCreatesSentinel(t *testing.T) {
 	servicesDir := filepath.Join(dir, "services")
 
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: servicesDir,
 		Services: []config.ServiceEntry{
 			{Name: "sshd", Enabled: true, Sentinel: true},
@@ -47,6 +48,7 @@ func TestServicesDisableRemovesSentinel(t *testing.T) {
 	}
 
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: servicesDir,
 		Services: []config.ServiceEntry{
 			{Name: "telnetd", Enabled: false, Sentinel: true},
@@ -69,6 +71,7 @@ func TestServicesSentinelFalseNoFile(t *testing.T) {
 	servicesDir := filepath.Join(dir, "services")
 
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: servicesDir,
 		Services: []config.ServiceEntry{
 			{Name: "cron", Enabled: true, Sentinel: false},
@@ -101,6 +104,7 @@ func TestServicesDisabledSentinelFalseNoRemove(t *testing.T) {
 	}
 
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: servicesDir,
 		Services: []config.ServiceEntry{
 			{Name: "legacy", Enabled: false, Sentinel: false},
@@ -137,6 +141,7 @@ func TestServicesCopyDefaultConfig(t *testing.T) {
 
 	destFile := filepath.Join(dir, "etc", "ssh", "sshd_config")
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: filepath.Join(dir, "services"),
 		Services: []config.ServiceEntry{
 			{
@@ -191,6 +196,7 @@ func TestServicesCopyExistingFileGetsNewSuffix(t *testing.T) {
 	}
 
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: filepath.Join(dir, "services"),
 		Services: []config.ServiceEntry{
 			{
@@ -237,6 +243,7 @@ func TestServicesCopyMissingSource(t *testing.T) {
 	destFile := filepath.Join(dir, "etc", "app", "config")
 
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: filepath.Join(dir, "services"),
 		Services: []config.ServiceEntry{
 			{
@@ -275,6 +282,7 @@ func TestServicesDryRunNoWrites(t *testing.T) {
 	}
 
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: servicesDir,
 		Services: []config.ServiceEntry{
 			{Name: "sshd", Enabled: true, Sentinel: true},
@@ -312,6 +320,7 @@ func TestServicesDryRunNoWrites(t *testing.T) {
 func TestServicesEmptyList(t *testing.T) {
 	dir := t.TempDir()
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: filepath.Join(dir, "services"),
 	}
 	svc := NewServicesModule(svcConfig)
@@ -323,6 +332,34 @@ func TestServicesEmptyList(t *testing.T) {
 	}
 	if result.Message != "processed 0 service(s)" {
 		t.Fatalf("unexpected message: %s", result.Message)
+	}
+}
+
+func TestServicesModuleDisabled(t *testing.T) {
+	dir := t.TempDir()
+	servicesDir := filepath.Join(dir, "services")
+
+	svcConfig := config.ServicesConfig{
+		Enabled:   false,
+		Directory: servicesDir,
+		Services: []config.ServiceEntry{
+			{Name: "sshd", Enabled: true, Sentinel: true},
+		},
+	}
+
+	svc := NewServicesModule(svcConfig)
+	result := svc.Run(context.Background(), false)
+
+	if !result.Success {
+		t.Fatalf("expected success when module disabled, got error: %s", result.Error)
+	}
+	if result.Message != "services disabled" {
+		t.Errorf("message = %q, want %q", result.Message, "services disabled")
+	}
+
+	sentinel := filepath.Join(servicesDir, "sshd")
+	if _, err := os.Stat(sentinel); !os.IsNotExist(err) {
+		t.Error("sentinel should not be created when module is disabled")
 	}
 }
 
@@ -339,6 +376,7 @@ func TestServicesMultipleServices(t *testing.T) {
 	}
 
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: servicesDir,
 		Services: []config.ServiceEntry{
 			{Name: "sshd", Enabled: true, Sentinel: true},
@@ -391,6 +429,7 @@ func TestServicesMultipleEnabledWithCopy(t *testing.T) {
 	appDest := filepath.Join(dir, "etc", "app", "config")
 
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: filepath.Join(dir, "services"),
 		Services: []config.ServiceEntry{
 			{
@@ -463,6 +502,7 @@ func TestServicesCopyCreatesDestinationDir(t *testing.T) {
 	destFile := filepath.Join(deepDestDir, "app.cfg")
 
 	svcConfig := config.ServicesConfig{
+		Enabled:   true,
 		Directory: filepath.Join(dir, "services"),
 		Services: []config.ServiceEntry{
 			{

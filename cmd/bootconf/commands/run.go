@@ -18,6 +18,7 @@ import (
 	"github.com/offline-lab/bootconf/internal/module/system"
 	"github.com/offline-lab/bootconf/internal/module/users"
 	"github.com/offline-lab/bootconf/internal/module/wifi"
+	"github.com/offline-lab/bootconf/internal/output"
 	"github.com/offline-lab/bootconf/internal/status"
 )
 
@@ -35,7 +36,8 @@ and service configurations as needed.`,
 	Run: runBootconf,
 }
 
-func runBootconf(cmd *cobra.Command, args []string) {
+// runBootconf is the main entry point for "bootconf run". It loads config, validates it, builds the module list, runs them, and writes status.
+func runBootconf(_ *cobra.Command, _ []string) {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		os.Exit(0)
 	}
@@ -69,67 +71,65 @@ func runBootconf(cmd *cobra.Command, args []string) {
 		files.NewFilesModule(cfg.Files),
 	}
 
-	runner := module.NewRunner(modules)
-	if runSection != "" {
-		runner.SetSection(runSection)
-	}
-
 	ctx := context.Background()
-	results := runner.Run(ctx, dryRun)
+	start := time.Now()
+	results := module.NewRunner(modules).Run(ctx, dryRun, runSection)
+	totalDuration := time.Since(start)
 
 	statusDir := filepath.Join(cfg.Bootconf.Directory, ".bootconf")
-	writeRunStatus(statusDir, results)
-
-	printResults(results)
-
-	overall := true
-	for _, section := range results {
-		if !section.Success {
-			overall = false
-			break
-		}
-	}
-
+	overall := writeRunStatus(statusDir, results)
+	printResults(results, dryRun, totalDuration)
 	if !overall {
 		os.Exit(1)
 	}
 }
 
-func writeRunStatus(statusDir string, results []module.Result) {
+// writeRunStatus persists the run results to disk and returns the overall success state. A write failure is logged but does not fail the run.
+func writeRunStatus(statusDir string, results []module.Result) bool {
 	overall := true
-	sections := make([]status.SectionStatus, len(results))
-	for idx, section := range results {
-		if !section.Success {
+	for _, r := range results {
+		if !r.Success {
 			overall = false
 		}
-		sections[idx] = status.SectionStatus{
-			Section:  section.Section,
-			Success:  section.Success,
-			Message:  section.Message,
-			Error:    section.Error,
-			Duration: section.Duration,
-		}
 	}
-
-	runStatus := &status.RunStatus{
+	if err := status.Write(statusDir, &status.RunStatus{
 		Timestamp: time.Now().UTC(),
 		Overall:   overall,
-		Sections:  sections,
-	}
-
-	if err := status.Write(statusDir, runStatus); err != nil {
+		Sections:  results,
+	}); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: failed to write status: %v\n", err)
 	}
+	return overall
 }
 
-func printResults(results []module.Result) {
-	for _, section := range results {
-		if section.Success {
-			fmt.Printf("  %-12s OK\n", section.Section)
-		} else {
-			fmt.Printf("  %-12s FAILED: %s\n", section.Section, section.Error)
-		}
+func printResults(results []module.Result, dryRun bool, totalDuration time.Duration) {
+	if dryRun {
+		fmt.Println("[dry-run] No changes were applied.")
+		fmt.Println()
 	}
+
+	statusLabel := "OK"
+	if dryRun {
+		statusLabel = "DRY-RUN"
+	}
+
+	tbl := output.NewTable("Section", "Status", "Detail")
+	for _, r := range results {
+		s := statusLabel
+		if !r.Success {
+			s = "FAIL"
+		}
+
+		detail := r.Message
+		if !r.Success {
+			detail = r.Error
+		}
+
+		tbl.AddRow(r.Section, s, detail)
+	}
+	tbl.Render()
+
+	fmt.Printf("\n%d section(s) completed in %s\n", len(results), totalDuration.Round(time.Microsecond))
 }
 
 func init() {

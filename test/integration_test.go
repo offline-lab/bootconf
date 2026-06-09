@@ -143,7 +143,7 @@ func runModules(t *testing.T, modules []module.Module, dryRun bool) []module.Res
 	t.Helper()
 
 	runner := module.NewRunner(modules)
-	results := runner.Run(context.Background(), dryRun)
+	results := runner.Run(context.Background(), dryRun, "")
 
 	for _, result := range results {
 		if !result.Success {
@@ -167,21 +167,10 @@ func assertAllSectionsSucceeded(t *testing.T, results []module.Result) {
 func assertStatusRoundTrip(t *testing.T, statusDir string, results []module.Result, expectedSectionCount int) {
 	t.Helper()
 
-	sections := make([]status.SectionStatus, len(results))
-	for idx, result := range results {
-		sections[idx] = status.SectionStatus{
-			Section:  result.Section,
-			Success:  result.Success,
-			Message:  result.Message,
-			Error:    result.Error,
-			Duration: result.Duration,
-		}
-	}
-
 	runStatus := &status.RunStatus{
 		Timestamp: time.Now().UTC(),
 		Overall:   true,
-		Sections:  sections,
+		Sections:  results,
 	}
 
 	if err := status.Write(statusDir, runStatus); err != nil {

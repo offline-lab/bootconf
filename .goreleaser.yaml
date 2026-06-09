@@ -1,0 +1,94 @@
+version: 2
+
+project_name: bootconf
+
+env:
+  - CGO_ENABLED=0
+
+builds:
+  - id: bootconf
+    main: ./cmd/bootconf
+    binary: bootconf
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/offline-lab/bootconf/internal/version.Version={{.Version}}
+      - -X github.com/offline-lab/bootconf/internal/version.Commit={{.Commit}}
+      - -X github.com/offline-lab/bootconf/internal/version.BuildTime={{.Date}}
+
+archives:
+  - id: tarball
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    builds:
+      - bootconf
+    files:
+      - src: "bootconf.yaml"
+        dst: etc/bootconf/bootconf.yaml.example
+      - src: "README.md"
+        dst: .
+
+nfpms:
+  - id: bootconf
+    package_name: bootconf
+    vendor: Offline Lab
+    homepage: https://github.com/offline-lab/bootconf
+    maintainer: Flip Hess <flip@offline-lab.org>
+    description: |
+      Bootconf reads a YAML configuration file and prepares a readonly
+      Linux system at boot time. It applies network settings, hostname,
+      SSH keys, user accounts, and system configuration from a single
+      config file.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+      - apk
+    builds:
+      - bootconf
+    contents:
+      - src: ./bootconf.yaml
+        dst: /etc/bootconf/bootconf.yaml.example
+        type: config
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "merge conflict"
+
+release:
+  github:
+    owner: offline-lab
+    name: bootconf
+  draft: false
+  prerelease: auto
+  mode: append
+  footer: |
+    ## Installation
+
+    ### Debian/Ubuntu
+    ```bash
+    sudo dpkg -i bootconf_*.deb
+    ```
+
+    ### RHEL/CentOS/Fedora
+    ```bash
+    sudo rpm -i bootconf-*.rpm
+    ```
+
+    ### Alpine
+    ```bash
+    sudo apk add --allow-untrusted bootconf-*.apk
+    ```

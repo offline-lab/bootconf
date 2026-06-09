@@ -1,10 +1,14 @@
 # bootconf
 
-Bootconf is a little Go CLI utility that configures a Linux system at boot time from a
-single YAML file. It runs before any other service starts, placing configuration
-files, SSH host keys, user accounts, and service sentinels into place.
+Bootconf is a little Go CLI utility
+that configures a Linux system at boot time from a single YAML file.
+
+It runs before any other service starts, placing configuration files,
+SSH host keys, user accounts, and service sentinels into place.
+
 Because it executes on every boot (not just the first), configuration
 changes take effect on the next reboot without reimaging the device.
+
 
 ## Install
 

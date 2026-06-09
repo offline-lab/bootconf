@@ -1,0 +1,23 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        mkdir -p /data/bootconf/.bootconf
+
+        if [ ! -f /etc/bootconf/bootconf.yaml ]; then
+            cp /etc/bootconf/bootconf.yaml.example /etc/bootconf/bootconf.yaml
+            chmod 640 /etc/bootconf/bootconf.yaml
+        fi
+
+        echo ""
+        echo "bootconf has been installed."
+        echo ""
+        echo "Edit /etc/bootconf/bootconf.yaml to configure your system."
+        echo ""
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

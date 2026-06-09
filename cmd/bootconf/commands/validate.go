@@ -17,7 +17,8 @@ making any changes to the system. Works fully offline.`,
 	Run: validateConfig,
 }
 
-func validateConfig(cmd *cobra.Command, args []string) {
+// validateConfig parses and validates the config file without making any system changes. Used for offline verification (e.g. in CI).
+func validateConfig(_ *cobra.Command, _ []string) {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		fmt.Println("no config file found")
 		os.Exit(0)

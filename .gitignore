@@ -1,6 +1,29 @@
+# Binaries
+/bootconf
+
+# Build directory
 build/
+dist/
+
+# Test files
+*.log
+test-logs/
+*.bak
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage
 coverage.out
 coverage.html
-*.swp
-.DS_Store
-tmp/
+
+# Man pages (generated from .md)
+man/*.1

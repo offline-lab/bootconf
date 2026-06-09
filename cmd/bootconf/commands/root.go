@@ -1,3 +1,4 @@
+// Package commands defines the Cobra CLI commands for bootconf.
 package commands
 
 import (
@@ -24,13 +25,14 @@ hostname, SSH keys, and other system configuration from a single config file.`,
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		fmt.Printf("bootconf %s\n", version.Version)
 		fmt.Printf("  Commit:    %s\n", version.Commit)
 		fmt.Printf("  Built:     %s\n", version.BuildTime)
 	},
 }
 
+// Execute runs the root Cobra command and returns any error.
 func Execute() error {
 	return rootCmd.Execute()
 }

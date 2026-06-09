@@ -1,0 +1,17 @@
+Source: bootconf
+Section: admin
+Priority: optional
+Maintainer: Flip Hess <flip@offline-lab.org>
+Build-Depends: debhelper (>= 12), golang-go (>= 1.24)
+Standards-Version: 4.5.0
+Homepage: https://github.com/offline-lab/bootconf
+Vcs-Browser: https://github.com/offline-lab/bootconf
+Vcs-Git: https://github.com/offline-lab/bootconf.git
+
+Package: bootconf
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Boot-time configuration tool for readonly Linux systems
+ Reads a YAML configuration file and applies system settings at boot:
+ hostname, timezone, SSH keys, WiFi, user accounts, and file provisioning.
+ Designed for readonly OS appliances that need first-boot configuration.

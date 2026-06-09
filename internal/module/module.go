@@ -1,23 +1,17 @@
+// Package module defines the interface and runner for bootconf configuration
+// modules. Each module (system, ssh, wifi, etc.) implements the Module
+// interface and is executed sequentially by the Runner.
 package module
 
 import "context"
 
 // Result holds the outcome of a single module execution.
 type Result struct {
-	// Section identifies which module produced this result.
-	Section string
-
-	// Success indicates whether the module completed without errors.
-	Success bool
-
-	// Message contains a human-readable summary of what was done.
-	Message string
-
-	// Error describes any failure that occurred, empty on success.
-	Error string
-
-	// Duration records how long the module took to execute.
-	Duration string
+	Section  string `json:"section"`
+	Success  bool   `json:"success"`
+	Message  string `json:"message,omitempty"`
+	Error    string `json:"error,omitempty"`
+	Duration string `json:"duration,omitempty"`
 }
 
 // Module is the interface each configuration section must implement.

@@ -1,0 +1,12 @@
+bootconf (1.0.0-1) unstable; urgency=medium
+
+  * Initial release
+  * YAML-driven boot-time configuration for readonly Linux
+  * Hostname and timezone configuration
+  * SSH host key generation and service management
+  * WiFi (wpa_supplicant) configuration
+  * User account provisioning via systemd-sysusers
+  * File provisioning with write-protect mechanism
+  * Comprehensive input validation
+
+ -- Flip Hess <flip@offline-lab.org>  Tue, 09 Jun 2026 12:00:00 +0000

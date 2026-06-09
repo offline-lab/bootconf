@@ -1,3 +1,8 @@
+// Package users creates system user accounts via systemd-sysusers convention.
+// For each enabled user, a .conf file is written containing the sysusers
+// directive. Home directories and .ssh/authorized_keys are provisioned
+// directly. Disabled users have their config removed and their account
+// deleted via userdel.
 package users
 
 import (
@@ -12,6 +17,7 @@ import (
 	"github.com/offline-lab/bootconf/internal/module"
 )
 
+// UsersModule provisions user accounts from config entries. UIDs are assigned sequentially starting from uidStart to avoid collisions with system accounts.
 type UsersModule struct {
 	enabled  bool
 	entries  []config.UserEntry
@@ -19,6 +25,7 @@ type UsersModule struct {
 	usersDir string
 }
 
+// NewUsersModule creates a UsersModule from the given users config and UID start value.
 func NewUsersModule(cfg config.UsersConfig, uidStart int) *UsersModule {
 	return &UsersModule{
 		enabled:  cfg.Enabled,
@@ -28,54 +35,49 @@ func NewUsersModule(cfg config.UsersConfig, uidStart int) *UsersModule {
 	}
 }
 
-func (m *UsersModule) Name() string {
-	return "users"
-}
+// Name returns the module identifier "users".
+func (m *UsersModule) Name() string { return "users" }
 
+// Run provisions or removes user accounts based on config entries.
 func (m *UsersModule) Run(_ context.Context, dryRun bool) module.Result {
 	if !m.enabled {
-		return module.Result{
-			Section: "users",
-			Success: true,
-			Message: "users disabled",
-		}
+		return module.Result{Section: m.Name(), Success: true, Message: "users disabled"}
 	}
 
-	for entryIdx, entry := range m.entries {
+	for i, entry := range m.entries {
 		if !entry.Enabled {
 			if !dryRun {
-				m.removeUser(entry.Name)
+				m.teardownUser(entry.Name)
 			}
 			continue
 		}
 
-		uid := m.uidStart + entryIdx
-		if err := m.createUser(entry, uid, dryRun); err != nil {
+		uid := m.uidStart + i
+
+		if err := m.provisionUser(entry, uid, dryRun); err != nil {
 			return module.Result{
-				Section: "users",
+				Section: m.Name(),
 				Success: false,
 				Error:   fmt.Errorf("user %q: %w", entry.Name, err).Error(),
 			}
 		}
 	}
 
-	return module.Result{
-		Section: "users",
-		Success: true,
-		Message: fmt.Sprintf("processed %d users", len(m.entries)),
-	}
+	return module.Result{Section: m.Name(), Success: true, Message: fmt.Sprintf("processed %d users", len(m.entries))}
 }
 
-func (m *UsersModule) removeUser(name string) {
+// teardownUser removes the sysusers config file and deletes the system account. Username is validated before passing to userdel to prevent injection.
+func (m *UsersModule) teardownUser(name string) {
 	_ = os.Remove(filepath.Join(m.usersDir, name+".conf"))
 
-	if isValidUsername(name) {
+	if config.IsValidUsername(name) {
 		_ = exec.Command("gpasswd", "-d", name, "sudo").Run()
 		_ = exec.Command("userdel", name).Run()
 	}
 }
 
-func (m *UsersModule) createUser(entry config.UserEntry, uid int, dryRun bool) error {
+// provisionUser creates the sysusers config, home directory, .ssh directory, and authorized_keys file for a single user. UID ownership is set for all created paths.
+func (m *UsersModule) provisionUser(entry config.UserEntry, uid int, dryRun bool) error {
 	if dryRun {
 		return nil
 	}
@@ -99,6 +101,7 @@ func (m *UsersModule) createUser(entry config.UserEntry, uid int, dryRun bool) e
 	_ = os.Chown(entry.Home, uid, uid)
 
 	sshDir := filepath.Join(entry.Home, ".ssh")
+
 	if err := os.MkdirAll(sshDir, 0700); err != nil {
 		return fmt.Errorf("create .ssh: %w", err)
 	}
@@ -107,6 +110,7 @@ func (m *UsersModule) createUser(entry config.UserEntry, uid int, dryRun bool) e
 	if len(entry.AuthorizedKeys) > 0 {
 		keysPath := filepath.Join(sshDir, "authorized_keys")
 		keysContent := strings.Join(entry.AuthorizedKeys, "\n") + "\n"
+
 		if err := os.WriteFile(keysPath, []byte(keysContent), 0600); err != nil {
 			return fmt.Errorf("write authorized_keys: %w", err)
 		}
@@ -114,16 +118,4 @@ func (m *UsersModule) createUser(entry config.UserEntry, uid int, dryRun bool) e
 	}
 
 	return nil
-}
-
-func isValidUsername(name string) bool {
-	if len(name) == 0 || name[0] == '-' {
-		return false
-	}
-	for _, char := range name {
-		if !((char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char == '_' || char == '-') {
-			return false
-		}
-	}
-	return true
 }

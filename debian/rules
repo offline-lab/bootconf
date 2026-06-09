@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+# -*- makefile -*-
+
+export GO111MODULE=on
+export GOPROXY=https://proxy.golang.org,direct
+
+GO := go
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME := $(shell date -u '+%Y-%m-%d_%H:%M:%S')
+LDFLAGS := -ldflags="-s -w -X github.com/offline-lab/bootconf/internal/version.Version=$(VERSION) -X github.com/offline-lab/bootconf/internal/version.Commit=$(COMMIT) -X github.com/offline-lab/bootconf/internal/version.BuildTime=$(BUILD_TIME)"
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	$(GO) build $(LDFLAGS) -o build/bin/bootconf cmd/bootconf/main.go
+
+override_dh_auto_test:
+	$(GO) test -v ./...
+
+override_dh_auto_install:
+	mkdir -p debian/bootconf/usr/bin
+	mkdir -p debian/bootconf/etc/bootconf
+	cp build/bin/bootconf debian/bootconf/usr/bin/
+	cp bootconf.yaml debian/bootconf/etc/bootconf/bootconf.yaml.example
+
+override_dh_auto_clean:
+	rm -rf build/
+	dh_auto_clean

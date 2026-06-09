@@ -7,34 +7,32 @@ import (
 	"github.com/offline-lab/bootconf/internal/logging"
 )
 
+// Runner executes a list of modules sequentially and collects results.
 type Runner struct {
 	modules []Module
-	section string
 }
 
+// NewRunner creates a Runner for the given module list.
 func NewRunner(modules []Module) *Runner {
-	return &Runner{
-		modules: modules,
-	}
+	return &Runner{modules: modules}
 }
 
-func (runner *Runner) SetSection(name string) {
-	runner.section = name
-}
-
-func (runner *Runner) Run(ctx context.Context, dryRun bool) []Result {
+// Run executes each module sequentially, filtering by section name if
+// specified. It collects results with timing information and returns them
+// all — callers decide how to handle failures.
+func (r *Runner) Run(ctx context.Context, dryRun bool, section string) []Result {
 	var results []Result
 
-	for _, mod := range runner.modules {
-		if runner.section != "" && mod.Name() != runner.section {
+	for _, mod := range r.modules {
+		if section != "" && mod.Name() != section {
 			continue
 		}
 
 		start := time.Now()
-		logging.Info(mod.Name(), "starting section")
+		logging.Debug(mod.Name(), "starting section")
 		result := mod.Run(ctx, dryRun)
 		result.Duration = time.Since(start).String()
-		logging.Info(mod.Name(), "section completed in %s: success=%v", result.Duration, result.Success)
+		logging.Debug(mod.Name(), "section completed in %s: success=%v", result.Duration, result.Success)
 		results = append(results, result)
 	}
 

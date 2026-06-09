@@ -18,8 +18,8 @@ func TestFormatWithSection(t *testing.T) {
 	if !strings.Contains(output, "INFO") {
 		t.Error("output missing 'INFO' level")
 	}
-	if !strings.Contains(output, "section::wifi") {
-		t.Error("output missing 'section::wifi' section tag")
+	if !strings.Contains(output, "section=wifi") {
+		t.Error("output missing 'section=wifi' tag")
 	}
 	if !strings.Contains(output, `configuring SSID "mynetwork"`) {
 		t.Error("output missing formatted message")
@@ -55,14 +55,14 @@ func TestMultipleSections(t *testing.T) {
 	logger.Info("system", "system message")
 
 	output := buf.String()
-	if !strings.Contains(output, "section::wifi") {
-		t.Error("output missing section::wifi")
+	if !strings.Contains(output, "section=wifi") {
+		t.Error("output missing section=wifi")
 	}
-	if !strings.Contains(output, "section::ssh") {
-		t.Error("output missing section::ssh")
+	if !strings.Contains(output, "section=ssh") {
+		t.Error("output missing section=ssh")
 	}
-	if !strings.Contains(output, "section::system") {
-		t.Error("output missing section::system")
+	if !strings.Contains(output, "section=system") {
+		t.Error("output missing section=system")
 	}
 }
 

@@ -1,3 +1,7 @@
+// Package services manages service sentinel files and optional default config
+// file provisioning. Each service entry can optionally request a config file
+// be copied from a source path to a destination path — never overwriting
+// existing files (writes to dest.new instead).
 package services
 
 import (
@@ -6,18 +10,21 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/offline-lab/bootconf/internal/config"
 	"github.com/offline-lab/bootconf/internal/module"
 )
 
-// ServicesModule manages service sentinel files and optional default config copying.
+// ServicesModule creates/removes sentinel files and copies default configs
+// for each configured service entry.
 type ServicesModule struct {
 	entries     []config.ServiceEntry
 	enabled     bool
 	servicesDir string
 }
 
+// NewServicesModule creates a ServicesModule from the given services config.
 func NewServicesModule(cfg config.ServicesConfig) *ServicesModule {
 	return &ServicesModule{
 		entries:     cfg.Services,
@@ -26,74 +33,77 @@ func NewServicesModule(cfg config.ServicesConfig) *ServicesModule {
 	}
 }
 
-func (s *ServicesModule) Name() string {
-	return "services"
-}
+// Name returns the module identifier "services".
+func (s *ServicesModule) Name() string { return "services" }
 
+// Run processes all service entries: creating/removing sentinel files and
+// provisioning default config files as needed.
 func (s *ServicesModule) Run(_ context.Context, dryRun bool) module.Result {
-	var errors []error
+	if !s.enabled {
+		return module.Result{Section: s.Name(), Success: true, Message: "services disabled"}
+	}
+
+	if !dryRun {
+		if err := os.MkdirAll(s.servicesDir, 0750); err != nil {
+			return module.Result{Section: s.Name(), Success: false, Error: fmt.Sprintf("failed to create services dir: %v", err)}
+		}
+	}
+
+	var errs []string
 
 	for _, entry := range s.entries {
-		if entry.Enabled {
-			if entry.Sentinel && !dryRun {
-				if err := os.MkdirAll(s.servicesDir, 0750); err != nil {
-					errors = append(errors, fmt.Errorf("service %s: failed to create services dir: %w", entry.Name, err))
-					continue
-				}
+		if !dryRun && entry.Sentinel {
+			sentinel := filepath.Join(s.servicesDir, entry.Name)
 
-				sentinel := filepath.Join(s.servicesDir, entry.Name)
+			if entry.Enabled {
 				if err := os.WriteFile(sentinel, nil, 0640); err != nil {
-					errors = append(errors, fmt.Errorf("service %s: failed to create sentinel: %w", entry.Name, err))
+					errs = append(errs, fmt.Sprintf("service %s: failed to create sentinel: %v", entry.Name, err))
 					continue
 				}
-			}
-
-			if entry.DefaultConfig.Copy && !dryRun {
-				if err := copyDefaultConfig(entry); err != nil {
-					errors = append(errors, fmt.Errorf("service %s: %w", entry.Name, err))
-				}
-			}
-
-		} else {
-			if entry.Sentinel && !dryRun {
-				sentinel := filepath.Join(s.servicesDir, entry.Name)
+			} else {
 				if err := os.Remove(sentinel); err != nil && !os.IsNotExist(err) {
-					errors = append(errors, fmt.Errorf("service %s: failed to remove sentinel: %w", entry.Name, err))
+					errs = append(errs, fmt.Sprintf("service %s: failed to remove sentinel: %v", entry.Name, err))
 				}
+			}
+		}
+
+		if !dryRun && entry.Enabled && entry.DefaultConfig.Copy {
+			if err := provisionConfigFile(entry); err != nil {
+				errs = append(errs, fmt.Sprintf("service %s: %v", entry.Name, err))
 			}
 		}
 	}
 
-	if len(errors) > 0 {
+	if len(errs) > 0 {
 		return module.Result{
 			Section: s.Name(),
 			Success: false,
-			Message: fmt.Sprintf("completed with %d error(s)", len(errors)),
-			Error:   formatErrors(errors),
+			Message: fmt.Sprintf("completed with %d error(s)", len(errs)),
+			Error:   strings.Join(errs, "; "),
 		}
 	}
 
-	return module.Result{
-		Section: s.Name(),
-		Success: true,
-		Message: fmt.Sprintf("processed %d service(s)", len(s.entries)),
-	}
+	return module.Result{Section: s.Name(), Success: true, Message: fmt.Sprintf("processed %d service(s)", len(s.entries))}
 }
 
-func copyDefaultConfig(entry config.ServiceEntry) error {
+// provisionConfigFile copies the default config from source to destination.
+// If the destination already exists, the new content is written to dest.new
+// to avoid overwriting user-modified files. The file is chowned to root:root.
+func provisionConfigFile(entry config.ServiceEntry) error {
 	src, err := os.Open(entry.DefaultConfig.Source)
 	if err != nil {
 		return fmt.Errorf("failed to open source: %w", err)
 	}
-	defer src.Close()
+
+	defer func() { _ = src.Close() }()
 
 	dest := entry.DefaultConfig.Destination
+
 	if _, err := os.Stat(dest); err == nil {
 		dest = dest + ".new"
 	}
 
-	destDir := filepath.Dir(dest)
-	if err := os.MkdirAll(destDir, 0750); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dest), 0750); err != nil {
 		return fmt.Errorf("failed to create destination dir: %w", err)
 	}
 
@@ -116,15 +126,4 @@ func copyDefaultConfig(entry config.ServiceEntry) error {
 	_ = os.Chown(dest, 0, 0)
 
 	return nil
-}
-
-func formatErrors(errors []error) string {
-	combined := ""
-	for _, serviceErr := range errors {
-		if combined != "" {
-			combined += "; "
-		}
-		combined += serviceErr.Error()
-	}
-	return combined
 }

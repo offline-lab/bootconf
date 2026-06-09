@@ -23,7 +23,7 @@ func TestRunnerAllSuccess(t *testing.T) {
 	}
 
 	runner := NewRunner(mods)
-	results := runner.Run(context.Background(), false)
+	results := runner.Run(context.Background(), false, "")
 
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
@@ -43,7 +43,7 @@ func TestRunnerPartialFailure(t *testing.T) {
 	}
 
 	runner := NewRunner(mods)
-	results := runner.Run(context.Background(), false)
+	results := runner.Run(context.Background(), false, "")
 
 	if len(results) != 3 {
 		t.Fatalf("expected 3 results, got %d", len(results))
@@ -67,8 +67,7 @@ func TestRunnerSingleSection(t *testing.T) {
 	}
 
 	runner := NewRunner(mods)
-	runner.SetSection("ssh")
-	results := runner.Run(context.Background(), false)
+	results := runner.Run(context.Background(), false, "ssh")
 
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -80,7 +79,7 @@ func TestRunnerSingleSection(t *testing.T) {
 
 func TestRunnerEmpty(t *testing.T) {
 	runner := NewRunner(nil)
-	results := runner.Run(context.Background(), false)
+	results := runner.Run(context.Background(), false, "")
 
 	if len(results) != 0 {
 		t.Fatalf("expected 0 results, got %d", len(results))

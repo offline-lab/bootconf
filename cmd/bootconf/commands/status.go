@@ -22,7 +22,7 @@ var statusCmd = &cobra.Command{
 	Short: "Show status of the last configuration run",
 	Long: `Display the results of the most recent bootconf run.
 By default shows a summary. Use flags to filter or show details.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(_ *cobra.Command, _ []string) {
 		basedir := "/data/bootconf"
 		if _, err := os.Stat(configPath); err == nil {
 			cfg, err := config.Load(configPath)

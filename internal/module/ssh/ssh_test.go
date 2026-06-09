@@ -236,7 +236,7 @@ func TestSSHEnabledNoHostKeyGeneration(t *testing.T) {
 
 func TestSSHSentinelDirCreated(t *testing.T) {
 	sshDir := t.TempDir()
-	// Non-existent nested path — createSentinel must create it
+	// Non-existent nested path — writeSentinel must create it
 	servicesDir := filepath.Join(t.TempDir(), "nested", "services")
 
 	cfg := config.SSHConfig{

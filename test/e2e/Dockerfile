@@ -7,7 +7,7 @@ RUN go mod download
 
 COPY . .
 
-ARG VERSION=dev
+ARG VERSION=e2e-test
 ARG COMMIT=unknown
 ARG BUILD_TIME=unknown
 
@@ -24,9 +24,13 @@ RUN apt-get update \
      systemd \
      dropbear \
      wpasupplicant \
+     procps \
  && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /build/build/bin/bootconf /usr/local/bin/bootconf
-COPY bootconf.yaml /etc/bootconf/bootconf.yaml.example
 
-ENTRYPOINT ["bootconf"]
+COPY test/e2e/bootconf.yaml /etc/bootconf/test-config.yaml
+COPY test/e2e/source-data/ /boot/firmware/config/
+COPY test/e2e/run.sh /test/run.sh
+
+ENTRYPOINT ["/bin/bash", "/test/run.sh"]
