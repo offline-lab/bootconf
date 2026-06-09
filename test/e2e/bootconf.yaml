@@ -1,0 +1,87 @@
+bootconf:
+  enabled: true
+  directory: /data/bootconf
+
+system:
+  enabled: false
+  timezone: UTC
+  hostname: e2e-test
+
+ssh:
+  enabled: true
+  directory: /data/config/ssh
+  daemon: dropbear
+  keytype: ed25519
+  generate_host_keys: false
+
+wifi:
+  enabled: true
+  directory: /data/config/wifi
+  ssid: TestNetwork
+  password_hash: a2b3c4d5e6f7a2b3c4d5e6f7a2b3c4d5e6f7a2b3c4d5e6f7a2b3c4d5e6f7a2b3
+  country: NL
+
+services:
+  enabled: true
+  directory: /data/config/services
+  services:
+    - name: testservice
+      enabled: true
+      sentinel: true
+      default_config:
+        copy: true
+        source: /boot/firmware/config/test.conf
+        destination: /data/config/testservice/test.conf
+    - name: daemon
+      enabled: true
+      sentinel: true
+      default_config:
+        copy: true
+        source: /boot/firmware/config/daemon.conf
+        destination: /data/config/daemon/daemon.conf
+    - name: monitor
+      enabled: true
+      sentinel: false
+      default_config:
+        copy: true
+        source: /boot/firmware/config/monitor.conf
+        destination: /data/config/monitor/monitor.conf
+    - name: disabled-svc
+      enabled: false
+      sentinel: true
+
+users:
+  enabled: true
+  directory: /data/config/users
+  users:
+    - name: admin
+      enabled: true
+      sudo: true
+      home: /data/home/admin
+      authorized_keys:
+        - "ssh-ed25519 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCY1/jmHp/cSIPfG388BbaP/kISOKnsvPiMgLYm/vUsOFIvXfxqPo5Xh5r8wfwUQrjw1iLb3DYp6FWKEzAGpJRs= test@e2e"
+    - name: operator
+      enabled: true
+      sudo: false
+      home: /data/home/operator
+      authorized_keys:
+        - "ssh-ed25519 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCY1/jmHp/cSIPfG388BbaP/kISOKnsvPiMgLYm/vUsOFIvXfxqPo5Xh5r8wfwUQrjw1iLb3DYp6FWKEzAGpJRs= operator@e2e"
+        - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC7+e4P8aRdD3Z5F9e5T5tZ1+BvntZd6SBqJP3x5+7FH8W6d1IY7S5HI4T7R5vZaMT5hJ4HE8C+O2K4QO0ZmJnmnT4tGcH5WNP4k0X+6lD5W2b0K6/0OxU3uJwP3TQY+f5l5/8HI4aM5x8c6OZ7kl9+9X5cH4aL7+W9Z5F3e4Q5W8cR5P+J7e6T4c5D3aL8+F7xW9c6O5Y3uK7+R4e5T6c8P9aH3dL7+W5cF4aR6tZ8+O5Y7uK9+R3e4T5c6P8aH7dL9+W5cF4aR6tZ8+O5 operator2@e2e"
+    - name: auditor
+      enabled: true
+      sudo: false
+      home: /data/home/auditor
+      authorized_keys: []
+
+files:
+  enabled: true
+  files:
+    - source: /boot/firmware/config/app.conf
+      destination: /data/config/app/app.conf
+      chmod: "640"
+    - source: /boot/firmware/config/secret.key
+      destination: /data/config/secrets/secret.key
+      chmod: "600"
+    - source: /boot/firmware/config/monitor.conf
+      destination: /data/config/app/monitor.conf
+      chmod: "644"

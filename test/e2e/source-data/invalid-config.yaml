@@ -1,0 +1,10 @@
+# Invalid bootconf config - password_hash too short
+bootconf:
+  enabled: true
+
+wifi:
+  enabled: true
+  directory: /data/config/wifi
+  ssid: TestNetwork
+  password_hash: tooshort
+  country: NL
