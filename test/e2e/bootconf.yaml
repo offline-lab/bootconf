@@ -85,3 +85,44 @@ files:
     - source: /boot/firmware/config/monitor.conf
       destination: /data/config/app/monitor.conf
       chmod: "644"
+    - content: |
+        [e2e]
+        test=true
+      destination: /data/config/app/inline.conf
+      chmod: "640"
+
+templates:
+  enabled: true
+  templates:
+    - source: /boot/firmware/config/app.conf.tpl
+      destination: /data/config/app/rendered.conf
+      chmod: "640"
+      variables:
+        app_name: bootconf-e2e
+        env: testing
+
+shell:
+  enabled: true
+  directory: /data/bootconf/shell
+  commands:
+    - name: hello-world
+      allow_fail: false
+      firstboot: false
+      command: echo "hello from shell"
+    - name: first-boot-only
+      allow_fail: false
+      firstboot: true
+      command: echo "first boot setup"
+
+unitrun:
+  enabled: true
+  directory: /data/bootconf/scripts
+  firstboot: false
+  units:
+    - name: e2e-task
+      enabled: true
+      dependencies:
+        - After=multi-user.target
+      command: |
+        echo "e2e task ran"
+        exit 0
