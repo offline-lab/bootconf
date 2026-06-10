@@ -166,7 +166,7 @@ func (unitRunModule *UnitRunModule) removeUnit(ctx context.Context, unit config.
 func renderServiceFile(unitName string, dependencies []string, scriptPath string, extraPath string) string {
 	var sb strings.Builder
 	sb.WriteString("[Unit]\n")
-	sb.WriteString(fmt.Sprintf("Description=Bootconf Unit Task %s\n", unitName))
+	fmt.Fprintf(&sb, "Description=Bootconf Unit Task %s\n", unitName)
 	sb.WriteString("DefaultDependencies=no\n")
 	for _, dependency := range dependencies {
 		sb.WriteString(dependency + "\n")
@@ -175,9 +175,9 @@ func renderServiceFile(unitName string, dependencies []string, scriptPath string
 	sb.WriteString("Type=oneshot\n")
 	sb.WriteString("RemainAfterExit=no\n")
 	if extraPath != "" {
-		sb.WriteString(fmt.Sprintf("Environment=PATH=%s:/usr/sbin:/usr/bin:/sbin:/bin\n", extraPath))
+		fmt.Fprintf(&sb, "Environment=PATH=%s:/usr/sbin:/usr/bin:/sbin:/bin\n", extraPath)
 	}
-	sb.WriteString(fmt.Sprintf("ExecStart=%s\n", scriptPath))
+	fmt.Fprintf(&sb, "ExecStart=%s\n", scriptPath)
 	sb.WriteString("\n[Install]\n")
 	sb.WriteString("WantedBy=multi-user.target\n")
 	return sb.String()
