@@ -140,3 +140,55 @@ files:
     - source: /boot/firmware/config/disco.conf
       destination: /data/config/disco/disco.conf
       chmod: 640
+
+# render templates to files
+templates:
+  enabled: true
+  templates:
+    - source: /boot/firmware/config/disco.conf.tpl
+      destination: /data/config/disco/disco.conf
+      variables:
+        some: blabla
+        another: yes
+      chmod: 640
+
+shell:
+  enabled: true
+  directory: /data/bootconf/shell
+  # Prepend a directory to PATH for every command (e.g. /usr/lib/framework/bin)
+  # Leave empty to inherit PATH from the environment unchanged.
+  path: ""
+  commands:
+    - name: get-process-list
+      allow_fail: true
+      firstboot: true
+      command: |
+        bash -c 'ps -ef'
+    - name: get-df
+      allow_fail: false
+      firstboot: false
+      command: df /
+
+unitrun:
+  # enable / disable
+  enabled: true
+  # Only run at first boot
+  firstboot: false
+  # Prepend a directory to PATH in every generated unit (e.g. /usr/lib/framework/bin)
+  # Leave empty to omit the Environment=PATH line entirely.
+  path: ""
+  # Where to save the scripts
+  directory: /data/bootconf/scripts
+  # unit declarations
+  units:
+  - name: some-name
+    enabled: true
+    dependencies:
+      - After=multi-user.target
+      - Before=shutdown.target
+      - Conflicts=shutdown.target
+    command: |
+      a bunch of commands here
+      to run several things
+      in a script
+      exit 0

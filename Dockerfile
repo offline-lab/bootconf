@@ -13,7 +13,7 @@ ARG BUILD_TIME=unknown
 
 RUN mkdir -p build/bin && \
     CGO_ENABLED=0 go build \
-    -ldflags="-s -w -X github.com/offline-lab/bootconf/internal/version.Version=${VERSION} -X github.com/offline-lab/bootconf/internal/version.Commit=${COMMIT} -X github.com/offline-lab/bootconf/internal/version.BuildTime=${BUILD_TIME}" \
+    -ldflags="-s -w -X github.com/offline-lab/bootconf/cmd/bootconf/commands.Version=${VERSION} -X github.com/offline-lab/bootconf/cmd/bootconf/commands.Commit=${COMMIT} -X github.com/offline-lab/bootconf/cmd/bootconf/commands.BuildTime=${BUILD_TIME}" \
     -o build/bin/bootconf ./cmd/bootconf
 
 FROM debian:trixie-slim

@@ -121,21 +121,21 @@ func newTestEnvironment(t *testing.T) *testEnvironment {
 
 func (env *testEnvironment) allModules() []module.Module {
 	return []module.Module{
-		system.NewSystemModule(env.cfg.System, env.cfg.Bootconf.Directory),
-		ssh.NewSSHModule(env.cfg.SSH, env.cfg.Services.Directory),
-		wifi.NewWifiModule(env.cfg.Wifi, env.cfg.Services.Directory),
-		services.NewServicesModule(env.cfg.Services),
-		users.NewUsersModule(env.cfg.Users, uidStart),
-		files.NewFilesModule(env.cfg.Files),
+		system.New(env.cfg.System, env.cfg.Bootconf.Directory),
+		ssh.New(env.cfg.SSH, env.cfg.Services.Directory),
+		wifi.New(env.cfg.Wifi, env.cfg.Services.Directory),
+		services.New(env.cfg.Services),
+		users.New(env.cfg.Users, uidStart),
+		files.New(env.cfg.Files),
 	}
 }
 
 func (env *testEnvironment) filesystemModules() []module.Module {
 	return []module.Module{
-		wifi.NewWifiModule(env.cfg.Wifi, env.cfg.Services.Directory),
-		services.NewServicesModule(env.cfg.Services),
-		users.NewUsersModule(env.cfg.Users, uidStart),
-		files.NewFilesModule(env.cfg.Files),
+		wifi.New(env.cfg.Wifi, env.cfg.Services.Directory),
+		services.New(env.cfg.Services),
+		users.New(env.cfg.Users, uidStart),
+		files.New(env.cfg.Files),
 	}
 }
 

@@ -2,12 +2,13 @@ package module
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/offline-lab/bootconf/internal/logging"
 )
 
-// Runner executes a list of modules sequentially and collects results.
+// Runner executes all modules concurrently and collects results in declaration order.
 type Runner struct {
 	modules []Module
 }
@@ -17,24 +18,33 @@ func NewRunner(modules []Module) *Runner {
 	return &Runner{modules: modules}
 }
 
-// Run executes each module sequentially, filtering by section name if
-// specified. It collects results with timing information and returns them
-// all — callers decide how to handle failures.
-func (r *Runner) Run(ctx context.Context, dryRun bool, section string) []Result {
-	var results []Result
-
-	for _, mod := range r.modules {
-		if section != "" && mod.Name() != section {
-			continue
+// Run executes each module concurrently in its own goroutine. Results are
+// returned in the same order as the module list regardless of completion order.
+// If section is non-empty, only the matching module runs.
+func (runner *Runner) Run(ctx context.Context, dryRun bool, section string) []Result {
+	var active []Module
+	for _, mod := range runner.modules {
+		if section == "" || mod.Name() == section {
+			active = append(active, mod)
 		}
-
-		start := time.Now()
-		logging.Debug(mod.Name(), "starting section")
-		result := mod.Run(ctx, dryRun)
-		result.Duration = time.Since(start).String()
-		logging.Debug(mod.Name(), "section completed in %s: success=%v", result.Duration, result.Success)
-		results = append(results, result)
 	}
 
+	results := make([]Result, len(active))
+	var wg sync.WaitGroup
+
+	for index, mod := range active {
+		wg.Add(1)
+		go func(index int, currentModule Module) {
+			defer wg.Done()
+			start := time.Now()
+			logging.Debug(currentModule.Name(), "starting")
+			result := currentModule.Run(ctx, dryRun)
+			result.Duration = time.Since(start).String()
+			logging.Debug(currentModule.Name(), "done in %s success=%v", result.Duration, result.Success)
+			results[index] = result
+		}(index, mod)
+	}
+
+	wg.Wait()
 	return results
 }

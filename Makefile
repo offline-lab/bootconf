@@ -3,7 +3,7 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME ?= $(shell date -u '+%Y-%m-%d_%H:%M:%S')
-LDFLAGS := -ldflags="-s -w -X github.com/offline-lab/bootconf/internal/version.Version=$(VERSION) -X github.com/offline-lab/bootconf/internal/version.Commit=$(COMMIT) -X github.com/offline-lab/bootconf/internal/version.BuildTime=$(BUILD_TIME)"
+LDFLAGS := -ldflags="-s -w -X github.com/offline-lab/bootconf/cmd/bootconf/commands.Version=$(VERSION) -X github.com/offline-lab/bootconf/cmd/bootconf/commands.Commit=$(COMMIT) -X github.com/offline-lab/bootconf/cmd/bootconf/commands.BuildTime=$(BUILD_TIME)"
 
 BUILDDIR := build
 BINDIR := $(BUILDDIR)/bin

@@ -23,7 +23,7 @@ func TestFilesCopyFile(t *testing.T) {
 
 	destFile := filepath.Join(destDir, "etc", "test.conf")
 
-	module := NewFilesModule(config.FilesConfig{
+	module := New(config.FilesConfig{
 		Enabled: true,
 		Files: []config.FileEntry{
 			{Source: sourceFile, Destination: destFile, Chmod: "640"},
@@ -38,7 +38,7 @@ func TestFilesCopyFile(t *testing.T) {
 	if result.Section != "files" {
 		t.Errorf("expected section 'files', got %q", result.Section)
 	}
-	if result.Message != "copied 1 file(s)" {
+	if result.Message != "wrote 1 file(s)" {
 		t.Errorf("expected message 'copied 1 file(s)', got %q", result.Message)
 	}
 
@@ -83,7 +83,7 @@ func TestFilesExistingFileGetsNewSuffix(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	module := NewFilesModule(config.FilesConfig{
+	module := New(config.FilesConfig{
 		Enabled: true,
 		Files: []config.FileEntry{
 			{Source: sourceFile, Destination: existingFile, Chmod: "640"},
@@ -124,7 +124,7 @@ func TestFilesChmodApplied(t *testing.T) {
 
 	destFile := filepath.Join(destDir, "usr", "local", "bin", "script.sh")
 
-	module := NewFilesModule(config.FilesConfig{
+	module := New(config.FilesConfig{
 		Enabled: true,
 		Files: []config.FileEntry{
 			{Source: sourceFile, Destination: destFile, Chmod: "755"},
@@ -153,7 +153,7 @@ func TestFilesMissingSource(t *testing.T) {
 
 	destFile := filepath.Join(destDir, "etc", "file.conf")
 
-	module := NewFilesModule(config.FilesConfig{
+	module := New(config.FilesConfig{
 		Enabled: true,
 		Files: []config.FileEntry{
 			{Source: "/nonexistent/path/file.conf", Destination: destFile, Chmod: "640"},
@@ -187,7 +187,7 @@ func TestFilesDryRunNoWrites(t *testing.T) {
 
 	destFile := filepath.Join(destDir, "etc", "data.txt")
 
-	module := NewFilesModule(config.FilesConfig{
+	module := New(config.FilesConfig{
 		Enabled: true,
 		Files: []config.FileEntry{
 			{Source: sourceFile, Destination: destFile, Chmod: "640"},
@@ -199,7 +199,7 @@ func TestFilesDryRunNoWrites(t *testing.T) {
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
 	}
-	if result.Message != "dry run: skipped" {
+	if result.Message != "would write 1 file(s) (dry-run)" {
 		t.Errorf("unexpected message: %q", result.Message)
 	}
 
@@ -211,7 +211,7 @@ func TestFilesDryRunNoWrites(t *testing.T) {
 // TestFilesDisabled verifies that a disabled module returns immediately
 // with "files disabled" and no processing occurs.
 func TestFilesDisabled(t *testing.T) {
-	module := NewFilesModule(config.FilesConfig{Enabled: false})
+	module := New(config.FilesConfig{Enabled: false})
 
 	result := module.Run(context.Background(), false)
 
@@ -226,7 +226,7 @@ func TestFilesDisabled(t *testing.T) {
 // TestFilesEmptyList verifies that an enabled module with no file entries
 // succeeds without errors.
 func TestFilesEmptyList(t *testing.T) {
-	module := NewFilesModule(config.FilesConfig{Enabled: true})
+	module := New(config.FilesConfig{Enabled: true})
 
 	result := module.Run(context.Background(), false)
 
@@ -262,7 +262,7 @@ func TestFilesMultipleFiles(t *testing.T) {
 	secondDest := filepath.Join(destDir, "opt", "second.conf")
 	thirdDest := filepath.Join(destDir, "var", "third.conf")
 
-	module := NewFilesModule(config.FilesConfig{
+	module := New(config.FilesConfig{
 		Enabled: true,
 		Files: []config.FileEntry{
 			{Source: firstSource, Destination: firstDest, Chmod: "640"},
@@ -276,7 +276,7 @@ func TestFilesMultipleFiles(t *testing.T) {
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
 	}
-	if result.Message != "copied 3 file(s)" {
+	if result.Message != "wrote 3 file(s)" {
 		t.Errorf("expected message 'copied 3 file(s)', got %q", result.Message)
 	}
 
@@ -318,7 +318,7 @@ func TestFilesDefaultChmod640(t *testing.T) {
 
 	destFile := filepath.Join(destDir, "etc", "default.conf")
 
-	module := NewFilesModule(config.FilesConfig{
+	module := New(config.FilesConfig{
 		Enabled: true,
 		Files: []config.FileEntry{
 			{Source: sourceFile, Destination: destFile, Chmod: "640"},
@@ -354,7 +354,7 @@ func TestFilesDestinationDirCreated(t *testing.T) {
 
 	nestedDest := filepath.Join(destDir, "a", "b", "c", "d", "deep.conf")
 
-	module := NewFilesModule(config.FilesConfig{
+	module := New(config.FilesConfig{
 		Enabled: true,
 		Files: []config.FileEntry{
 			{Source: sourceFile, Destination: nestedDest, Chmod: "640"},
@@ -393,7 +393,7 @@ func TestFilesMultipleErrors(t *testing.T) {
 	firstDest := filepath.Join(destDir, "etc", "first.conf")
 	secondDest := filepath.Join(destDir, "etc", "second.conf")
 
-	module := NewFilesModule(config.FilesConfig{
+	module := New(config.FilesConfig{
 		Enabled: true,
 		Files: []config.FileEntry{
 			{Source: "/nonexistent/first.conf", Destination: firstDest, Chmod: "640"},
@@ -442,7 +442,7 @@ func TestFilesPartialSuccess(t *testing.T) {
 	validDestSecond := filepath.Join(destDir, "etc", "valid2.conf")
 	invalidDest := filepath.Join(destDir, "etc", "missing.conf")
 
-	module := NewFilesModule(config.FilesConfig{
+	module := New(config.FilesConfig{
 		Enabled: true,
 		Files: []config.FileEntry{
 			{Source: validSourceFirst, Destination: validDestFirst, Chmod: "640"},
@@ -481,5 +481,84 @@ func TestFilesPartialSuccess(t *testing.T) {
 
 	if _, statErr := os.Stat(invalidDest); statErr == nil {
 		t.Error("dest for missing source should not exist")
+	}
+}
+
+// TestFilesContentWrite verifies that a content entry writes the inline string
+// to the destination with correct permissions.
+func TestFilesContentWrite(t *testing.T) {
+	destDir := t.TempDir()
+	destFile := filepath.Join(destDir, "etc", "motd")
+
+	result := New(config.FilesConfig{
+		Enabled: true,
+		Files: []config.FileEntry{
+			{Content: "Welcome to bootconf\n", Destination: destFile, Chmod: "644"},
+		},
+	}).Run(context.Background(), false)
+
+	if !result.Success {
+		t.Fatalf("expected success, got: %s", result.Error)
+	}
+	if result.Message != "wrote 1 file(s)" {
+		t.Errorf("unexpected message: %q", result.Message)
+	}
+
+	got, err := os.ReadFile(destFile)
+	if err != nil {
+		t.Fatalf("destination not written: %v", err)
+	}
+	if string(got) != "Welcome to bootconf\n" {
+		t.Errorf("unexpected content: %q", string(got))
+	}
+}
+
+// TestFilesContentDryRun verifies no file is written in dry-run mode.
+func TestFilesContentDryRun(t *testing.T) {
+	destDir := t.TempDir()
+	destFile := filepath.Join(destDir, "etc", "motd")
+
+	result := New(config.FilesConfig{
+		Enabled: true,
+		Files: []config.FileEntry{
+			{Content: "Hello\n", Destination: destFile, Chmod: "640"},
+		},
+	}).Run(context.Background(), true)
+
+	if !result.Success {
+		t.Fatalf("expected success, got: %s", result.Error)
+	}
+	if _, err := os.Stat(destFile); err == nil {
+		t.Error("dry-run must not write destination file")
+	}
+}
+
+// TestFilesContentExistingGetsNewSuffix verifies that a content entry does
+// not overwrite an existing destination.
+func TestFilesContentExistingGetsNewSuffix(t *testing.T) {
+	destDir := t.TempDir()
+	destFile := filepath.Join(destDir, "motd")
+
+	if err := os.WriteFile(destFile, []byte("old\n"), 0640); err != nil {
+		t.Fatal(err)
+	}
+
+	New(config.FilesConfig{
+		Enabled: true,
+		Files: []config.FileEntry{
+			{Content: "new\n", Destination: destFile, Chmod: "640"},
+		},
+	}).Run(context.Background(), false)
+
+	original, _ := os.ReadFile(destFile)
+	if string(original) != "old\n" {
+		t.Error("original file must not be overwritten")
+	}
+	newContent, err := os.ReadFile(destFile + ".new")
+	if err != nil {
+		t.Fatalf("dest.new not written: %v", err)
+	}
+	if string(newContent) != "new\n" {
+		t.Errorf("unexpected content in dest.new: %q", string(newContent))
 	}
 }

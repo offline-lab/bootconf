@@ -16,7 +16,7 @@ func TestSystemDisabled(t *testing.T) {
 		Timezone: "UTC",
 	}
 
-	module := NewSystemModule(cfg, statusDir)
+	module := New(cfg, statusDir)
 	result := module.Run(context.Background(), false)
 
 	if !result.Success {
@@ -36,7 +36,7 @@ func TestSystemDryRun(t *testing.T) {
 		Timezone: "UTC",
 	}
 
-	module := NewSystemModule(cfg, statusDir)
+	module := New(cfg, statusDir)
 	result := module.Run(context.Background(), true)
 
 	if result.Section != "system" {
@@ -54,7 +54,7 @@ func TestSystemNothingToConfigure(t *testing.T) {
 		Enabled: true,
 	}
 
-	module := NewSystemModule(cfg, statusDir)
+	module := New(cfg, statusDir)
 	result := module.Run(context.Background(), false)
 
 	if !result.Success {
@@ -73,7 +73,7 @@ func TestSystemHostnameOnly(t *testing.T) {
 		Hostname: "myhost",
 	}
 
-	module := NewSystemModule(cfg, statusDir)
+	module := New(cfg, statusDir)
 	result := module.Run(context.Background(), true)
 
 	if !result.Success {
@@ -89,7 +89,7 @@ func TestSystemTimezoneOnly(t *testing.T) {
 		Timezone: "Europe/Berlin",
 	}
 
-	module := NewSystemModule(cfg, statusDir)
+	module := New(cfg, statusDir)
 	result := module.Run(context.Background(), true)
 
 	if !result.Success {
@@ -106,14 +106,14 @@ func TestSystemDryRunNoExecute(t *testing.T) {
 		Timezone: "UTC",
 	}
 
-	module := NewSystemModule(cfg, statusDir)
+	module := New(cfg, statusDir)
 	result := module.Run(context.Background(), true)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
 	}
-	if result.Message != "dry-run: would configure system" {
-		t.Errorf("expected 'dry-run: would configure system', got %s", result.Message)
+	if result.Message != "system configured (dry-run)" {
+		t.Errorf("expected 'system configured (dry-run)', got %s", result.Message)
 	}
 }
 
@@ -124,14 +124,14 @@ func TestSystemStatusDirNotWritable(t *testing.T) {
 		Timezone: "UTC",
 	}
 
-	module := NewSystemModule(cfg, "/nonexistent/path")
+	module := New(cfg, "/nonexistent/path")
 	result := module.Run(context.Background(), false)
 
 	if result.Success {
 		t.Fatal("expected failure for non-writable status dir")
 	}
-	if result.Error != "basedir not writable" {
-		t.Errorf("expected 'basedir not writable', got %s", result.Error)
+	if result.Error != "status directory /nonexistent/path is not writable" {
+		t.Errorf("expected writable-check error, got %s", result.Error)
 	}
 }
 
@@ -142,7 +142,7 @@ func TestSystemDisabledIgnoresUnwritableDir(t *testing.T) {
 		Timezone: "UTC",
 	}
 
-	module := NewSystemModule(cfg, "/nonexistent/path")
+	module := New(cfg, "/nonexistent/path")
 	result := module.Run(context.Background(), false)
 
 	if !result.Success {

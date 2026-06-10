@@ -9,15 +9,17 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/offline-lab/bootconf/internal/config"
+	"github.com/offline-lab/bootconf/internal/logging"
 	"github.com/offline-lab/bootconf/internal/module"
+	"github.com/offline-lab/bootconf/internal/run"
 )
 
-// UsersModule provisions user accounts from config entries. UIDs are assigned sequentially starting from uidStart to avoid collisions with system accounts.
+// UsersModule provisions user accounts from config entries. UIDs are assigned
+// sequentially starting from uidStart to avoid collisions with system accounts.
 type UsersModule struct {
 	enabled  bool
 	entries  []config.UserEntry
@@ -25,8 +27,8 @@ type UsersModule struct {
 	usersDir string
 }
 
-// NewUsersModule creates a UsersModule from the given users config and UID start value.
-func NewUsersModule(cfg config.UsersConfig, uidStart int) *UsersModule {
+// New creates a UsersModule from the given users config and UID start value.
+func New(cfg config.UsersConfig, uidStart int) *UsersModule {
 	return &UsersModule{
 		enabled:  cfg.Enabled,
 		entries:  cfg.Users,
@@ -36,85 +38,108 @@ func NewUsersModule(cfg config.UsersConfig, uidStart int) *UsersModule {
 }
 
 // Name returns the module identifier "users".
-func (m *UsersModule) Name() string { return "users" }
+func (usersModule *UsersModule) Name() string { return "users" }
 
 // Run provisions or removes user accounts based on config entries.
-func (m *UsersModule) Run(_ context.Context, dryRun bool) module.Result {
-	if !m.enabled {
-		return module.Result{Section: m.Name(), Success: true, Message: "users disabled"}
+func (usersModule *UsersModule) Run(ctx context.Context, dryRun bool) module.Result {
+	if !usersModule.enabled {
+		return module.Result{Section: usersModule.Name(), Success: true, Message: "users disabled"}
 	}
 
-	for i, entry := range m.entries {
+	for index, entry := range usersModule.entries {
 		if !entry.Enabled {
-			if !dryRun {
-				m.teardownUser(entry.Name)
+			if dryRun {
+				logging.Info(usersModule.Name(), "would remove user %q and sysusers config (dry-run)", entry.Name)
+			} else {
+				logging.Info(usersModule.Name(), "removing user %q", entry.Name)
+				usersModule.teardownUser(ctx, entry.Name)
 			}
 			continue
 		}
 
-		uid := m.uidStart + i
+		uid := usersModule.uidStart + index
 
-		if err := m.provisionUser(entry, uid, dryRun); err != nil {
-			return module.Result{
-				Section: m.Name(),
-				Success: false,
-				Error:   fmt.Errorf("user %q: %w", entry.Name, err).Error(),
-			}
+		if err := usersModule.provisionUser(ctx, entry, uid, dryRun); err != nil {
+			errMsg := fmt.Sprintf("user %q: %v", entry.Name, err)
+			logging.Error(usersModule.Name(), "%s", errMsg)
+			return module.Result{Section: usersModule.Name(), Success: false, Error: errMsg}
 		}
 	}
 
-	return module.Result{Section: m.Name(), Success: true, Message: fmt.Sprintf("processed %d users", len(m.entries))}
+	return module.Result{Section: usersModule.Name(), Success: true, Message: fmt.Sprintf("processed %d users", len(usersModule.entries))}
 }
 
-// teardownUser removes the sysusers config file and deletes the system account. Username is validated before passing to userdel to prevent injection.
-func (m *UsersModule) teardownUser(name string) {
-	_ = os.Remove(filepath.Join(m.usersDir, name+".conf"))
+func (usersModule *UsersModule) teardownUser(ctx context.Context, name string) {
+	sysusersConf := filepath.Join(usersModule.usersDir, name+".conf")
+	if err := os.Remove(sysusersConf); err != nil && !os.IsNotExist(err) {
+		logging.Warn(usersModule.Name(), "failed to remove sysusers config %s: %v", sysusersConf, err)
+	}
 
-	if config.IsValidUsername(name) {
-		_ = exec.Command("gpasswd", "-d", name, "sudo").Run()
-		_ = exec.Command("userdel", name).Run()
+	if !config.IsValidUsername(name) {
+		logging.Warn(usersModule.Name(), "skipping userdel for unsafe username %q", name)
+		return
+	}
+
+	if err := run.Command(ctx, "gpasswd", "-d", name, "sudo"); err != nil {
+		logging.Warn(usersModule.Name(), "failed to remove %q from sudo group: %v", name, err)
+	}
+	if err := run.Command(ctx, "userdel", name); err != nil {
+		logging.Warn(usersModule.Name(), "failed to delete user %q: %v", name, err)
 	}
 }
 
-// provisionUser creates the sysusers config, home directory, .ssh directory, and authorized_keys file for a single user. UID ownership is set for all created paths.
-func (m *UsersModule) provisionUser(entry config.UserEntry, uid int, dryRun bool) error {
-	if dryRun {
-		return nil
-	}
-
-	if err := os.MkdirAll(m.usersDir, 0755); err != nil {
-		return fmt.Errorf("create users dir: %w", err)
-	}
-
+func (usersModule *UsersModule) provisionUser(ctx context.Context, entry config.UserEntry, uid int, dryRun bool) error {
+	sysusersConf := filepath.Join(usersModule.usersDir, entry.Name+".conf")
 	sysusersLine := fmt.Sprintf("u %s %d \"%s\" %s /bin/bash\n", entry.Name, uid, entry.Name, entry.Home)
 	if entry.Sudo {
 		sysusersLine += fmt.Sprintf("m %s sudo\n", entry.Name)
 	}
 
-	if err := os.WriteFile(filepath.Join(m.usersDir, entry.Name+".conf"), []byte(sysusersLine), 0644); err != nil {
-		return fmt.Errorf("write sysusers config: %w", err)
-	}
-
-	if err := os.MkdirAll(entry.Home, 0755); err != nil {
-		return fmt.Errorf("create home: %w", err)
-	}
-	_ = os.Chown(entry.Home, uid, uid)
-
 	sshDir := filepath.Join(entry.Home, ".ssh")
+	keysPath := filepath.Join(sshDir, "authorized_keys")
+
+	if dryRun {
+		logging.Info(usersModule.Name(), "would create users dir %s (dry-run)", usersModule.usersDir)
+		logging.Info(usersModule.Name(), "would write sysusers config %s (dry-run)", sysusersConf)
+		logging.Info(usersModule.Name(), "would create home %s and .ssh dir (dry-run)", entry.Home)
+		if len(entry.AuthorizedKeys) > 0 {
+			logging.Info(usersModule.Name(), "would write %d authorized key(s) to %s (dry-run)", len(entry.AuthorizedKeys), keysPath)
+		}
+		return nil
+	}
+
+	logging.Info(usersModule.Name(), "provisioning user %q (uid %d)", entry.Name, uid)
+
+	if err := os.MkdirAll(usersModule.usersDir, 0750); err != nil {
+		return fmt.Errorf("create users dir %s: %w", usersModule.usersDir, err)
+	}
+
+	if err := os.WriteFile(sysusersConf, []byte(sysusersLine), 0640); err != nil {
+		return fmt.Errorf("write sysusers config %s: %w", sysusersConf, err)
+	}
+
+	if err := os.MkdirAll(entry.Home, 0750); err != nil {
+		return fmt.Errorf("create home %s: %w", entry.Home, err)
+	}
+	if err := os.Chown(entry.Home, uid, uid); err != nil {
+		logging.Warn(usersModule.Name(), "failed to chown %s to uid %d: %v", entry.Home, uid, err)
+	}
 
 	if err := os.MkdirAll(sshDir, 0700); err != nil {
-		return fmt.Errorf("create .ssh: %w", err)
+		return fmt.Errorf("create .ssh dir %s: %w", sshDir, err)
 	}
-	_ = os.Chown(sshDir, uid, uid)
+	if err := os.Chown(sshDir, uid, uid); err != nil {
+		logging.Warn(usersModule.Name(), "failed to chown %s to uid %d: %v", sshDir, uid, err)
+	}
 
 	if len(entry.AuthorizedKeys) > 0 {
-		keysPath := filepath.Join(sshDir, "authorized_keys")
 		keysContent := strings.Join(entry.AuthorizedKeys, "\n") + "\n"
-
 		if err := os.WriteFile(keysPath, []byte(keysContent), 0600); err != nil {
-			return fmt.Errorf("write authorized_keys: %w", err)
+			return fmt.Errorf("write authorized_keys %s: %w", keysPath, err)
 		}
-		_ = os.Chown(keysPath, uid, uid)
+		if err := os.Chown(keysPath, uid, uid); err != nil {
+			logging.Warn(usersModule.Name(), "failed to chown %s to uid %d: %v", keysPath, uid, err)
+		}
 	}
 
 	return nil

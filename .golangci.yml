@@ -1,16 +1,58 @@
 version: "2"
 
+# Linter configuration for bootconf — a root-running, boot-time system tool.
+# Goal: signal over noise. Every enabled linter here catches things that
+# genuinely matter for a security-sensitive, embedded-Linux context.
+# Run: golangci-lint run ./...
+
 linters:
   enable:
-    - errcheck
-    - staticcheck
-    - govet
-    - revive
-    - unused
+    # --- Correctness ---------------------------------------------------------
+    - errcheck      # unchecked errors are silent failures in a root-running tool
+    - govet         # catches suspicious constructs the compiler misses
+    - staticcheck   # deep analysis: misused sync, unreachable code, printf verbs
+    - ineffassign   # variables written but never read are almost always bugs
+    - unused        # dead code is a maintenance and security liability
+
+    # --- Security ------------------------------------------------------------
+    # gosec is essential: this binary runs as root, creates files, and calls
+    # external commands. A missed permission or injection issue is a root exploit.
+    - gosec
+
+    # --- Style and maintainability -------------------------------------------
+    - misspell      # typos in comments become user-visible error messages
+    - revive        # actionable style rules with better messages than golint
+    - gocyclo       # flags functions that are too complex to test reliably
+
   settings:
     errcheck:
       check-type-assertions: false
       check-blank: false
+
+    gocyclo:
+      # Flag functions that are genuinely hard to test and reason about.
+      # 20 is intentionally strict but realistic for production Go.
+      min-complexity: 20
+
+    gosec:
+      excludes:
+        # G204: subprocess with variable args — every exec.Command call in this
+        # codebase receives a compile-time constant binary name and config values
+        # that have been validated by validateSafeName/validateUsername/isValidEnum.
+        - G204
+
+        # G304: file path via variable — all paths entering file operations come
+        # from config fields that have already passed validateSafePath (absolute,
+        # no ".." components). There is no unvalidated external input flowing to
+        # os.Open/os.ReadFile/os.WriteFile in production code.
+        - G304
+
+        # G306: file permissions — 0640 is our intentional minimum for files that
+        # must be group-readable (sentinel files read by init, status.json read by
+        # monitoring). We fix any genuine 0644/0755 mistakes directly in source
+        # rather than suppressing the rule.
+        - G306
+
     revive:
       rules:
         - name: exported
@@ -32,16 +74,29 @@ linters:
         - name: indent-error-flow
         - name: errorf
         - name: unnecessary-stmt
+
     staticcheck:
       checks:
         - "all"
-        - "-QF1001"
+        - "-QF1001"  # De Morgan's law rewrites are a style preference, not a bug
+
   exclusions:
     rules:
+      # "X.Y redeclares..." stutter warnings fire on idiomatic names like
+      # ssh.SSHModule or wifi.WifiModule where the package prefix is intentional.
       - text: "and that stutters"
         linters:
           - revive
 
+      # Test files create temp files with realistic permissions and use test
+      # credential strings. gosec rules G101 (hardcoded creds), G304 (file via
+      # variable), G306 (file permissions), and G301 (dir permissions) are
+      # uniformly false positives in test code.
+      - path: "_test\\.go$"
+        linters:
+          - gosec
+
 issues:
-  max-issues-per-linter: 50
-  max-same-issues: 10
+  # Never cap findings — hiding issues is worse than having too many.
+  max-issues-per-linter: 0
+  max-same-issues: 0

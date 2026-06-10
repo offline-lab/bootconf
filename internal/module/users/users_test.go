@@ -29,7 +29,7 @@ func TestUsersCreateHomeAndKeys(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -99,7 +99,7 @@ func TestUsersDisabledRemovesConfig(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -130,7 +130,7 @@ func TestUsersDryRunNoWrites(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), true)
 
 	if !result.Success {
@@ -160,7 +160,7 @@ func TestUsersMultipleUsers(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 2000)
+	users := New(cfg, 2000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -200,7 +200,7 @@ func TestUsersNoKeys(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -241,7 +241,7 @@ func TestUsersSingleKey(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -283,7 +283,7 @@ func TestUsersMultipleKeys(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -319,7 +319,7 @@ func TestUsersDisabledSkipsCreation(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -355,7 +355,7 @@ func TestUsersModuleDisabled(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -389,7 +389,7 @@ func TestUsersSshDirPerms(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -425,7 +425,7 @@ func TestUsersAuthorizedKeysPerms(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -456,7 +456,7 @@ func TestUsersSudoTrueAddsGroupLine(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {
@@ -487,7 +487,7 @@ func TestUsersSudoFalseNoGroupLine(t *testing.T) {
 		Directory: usersDir,
 		Users:     entries,
 	}
-	users := NewUsersModule(cfg, 1000)
+	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
 
 	if !result.Success {

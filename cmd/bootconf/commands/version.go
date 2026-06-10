@@ -1,5 +1,4 @@
-// Package version holds build-time metadata injected via LDFLAGS.
-package version
+package commands
 
 // Version, Commit, and BuildTime are set at build time via -ldflags.
 var (

@@ -27,3 +27,6 @@ coverage.html
 
 # Man pages (generated from .md)
 man/*.1
+
+# Generated docs site
+docs/public/

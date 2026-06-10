@@ -8,6 +8,8 @@ require (
 )
 
 require (
+	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 )

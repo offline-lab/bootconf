@@ -13,13 +13,16 @@ import (
 // Config is the top-level configuration structure. Each field maps to a
 // bootconf module that runs when enabled.
 type Config struct {
-	Bootconf BootconfConfig `yaml:"bootconf"`
-	System   SystemConfig   `yaml:"system"`
-	SSH      SSHConfig      `yaml:"ssh"`
-	Wifi     WifiConfig     `yaml:"wifi"`
-	Services ServicesConfig `yaml:"services"`
-	Users    UsersConfig    `yaml:"users"`
-	Files    FilesConfig    `yaml:"files"`
+	Bootconf  BootconfConfig  `yaml:"bootconf"`
+	System    SystemConfig    `yaml:"system"`
+	SSH       SSHConfig       `yaml:"ssh"`
+	Wifi      WifiConfig      `yaml:"wifi"`
+	Services  ServicesConfig  `yaml:"services"`
+	Users     UsersConfig     `yaml:"users"`
+	Files     FilesConfig     `yaml:"files"`
+	Templates TemplatesConfig `yaml:"templates"`
+	Shell     ShellConfig     `yaml:"shell"`
+	UnitRun   UnitRunConfig   `yaml:"unitrun"`
 }
 
 // BootconfConfig controls the overall bootconf tool: where it stores status
@@ -95,17 +98,72 @@ type UserEntry struct {
 	AuthorizedKeys []string `yaml:"authorized_keys"`
 }
 
-// FileEntry maps a source file to a destination path with specific permissions.
+// FileEntry maps a source file or inline content to a destination path.
+// Exactly one of Source or Content must be set.
 type FileEntry struct {
 	Source      string `yaml:"source"`
+	Content     string `yaml:"content"`
 	Destination string `yaml:"destination"`
 	Chmod       string `yaml:"chmod"`
 }
 
-// FilesConfig lists arbitrary files to copy into the target filesystem.
+// FilesConfig lists arbitrary files to copy or write into the target filesystem.
 type FilesConfig struct {
 	Enabled bool        `yaml:"enabled"`
 	Files   []FileEntry `yaml:"files"`
+}
+
+// TemplateEntry renders a Go text/template file with provided variables.
+// Template syntax: {{ .variableName }}. Missing keys cause an error at render time.
+type TemplateEntry struct {
+	Source      string            `yaml:"source"`
+	Destination string            `yaml:"destination"`
+	Variables   map[string]string `yaml:"variables"`
+	Chmod       string            `yaml:"chmod"`
+}
+
+// TemplatesConfig lists template files to render and install.
+type TemplatesConfig struct {
+	Enabled   bool            `yaml:"enabled"`
+	Templates []TemplateEntry `yaml:"templates"`
+}
+
+// ShellCommand is a single shell command to execute at boot.
+// Output (stdout, stderr, exit code) is written to <directory>/<name>.log.
+type ShellCommand struct {
+	Name      string `yaml:"name"`
+	AllowFail bool   `yaml:"allow_fail"`
+	FirstBoot bool   `yaml:"firstboot"`
+	Command   string `yaml:"command"`
+}
+
+// ShellConfig lists shell commands to run during boot.
+type ShellConfig struct {
+	Enabled   bool           `yaml:"enabled"`
+	Directory string         `yaml:"directory"`
+	Path      string         `yaml:"path"`
+	Commands  []ShellCommand `yaml:"commands"`
+}
+
+// UnitEntry describes a shell script to run via a generated systemd unit.
+type UnitEntry struct {
+	Name         string   `yaml:"name"`
+	Enabled      bool     `yaml:"enabled"`
+	Dependencies []string `yaml:"dependencies"`
+	Command      string   `yaml:"command"`
+}
+
+// UnitRunConfig defines scripts to run via generated systemd units.
+// Each enabled unit writes a script to Directory and a .service file to
+// /etc/systemd/system/, then calls systemctl enable + daemon-reload.
+// When FirstBoot is true, ConditionFirstBoot=yes is added to every generated
+// unit so systemd skips them after the first boot — no custom sentinel needed.
+type UnitRunConfig struct {
+	Enabled   bool        `yaml:"enabled"`
+	FirstBoot bool        `yaml:"firstboot"`
+	Directory string      `yaml:"directory"`
+	Path      string      `yaml:"path"`
+	Units     []UnitEntry `yaml:"units"`
 }
 
 // Load reads and parses a bootconf YAML file, then applies defaults.
@@ -126,20 +184,30 @@ func Load(path string) (*Config, error) {
 }
 
 // SetDefaults fills in zero-valued fields with sensible defaults
-// (e.g. ed25519 key type, dropbear daemon, 640 file permissions).
-func (c *Config) SetDefaults() {
-	if c.Bootconf.Directory == "" {
-		c.Bootconf.Directory = "/data/bootconf"
+// (e.g. ed25519 key type, dropbear daemon, 640 file permissions, /home/<name> for users).
+func (cfg *Config) SetDefaults() {
+	if cfg.Bootconf.Directory == "" {
+		cfg.Bootconf.Directory = "/data/bootconf"
 	}
-	if c.SSH.Keytype == "" {
-		c.SSH.Keytype = "ed25519"
+	if cfg.SSH.Keytype == "" {
+		cfg.SSH.Keytype = "ed25519"
 	}
-	if c.SSH.Daemon == "" {
-		c.SSH.Daemon = "dropbear"
+	if cfg.SSH.Daemon == "" {
+		cfg.SSH.Daemon = "dropbear"
 	}
-	for index := range c.Files.Files {
-		if c.Files.Files[index].Chmod == "" {
-			c.Files.Files[index].Chmod = "640"
+	for index := range cfg.Users.Users {
+		if cfg.Users.Users[index].Home == "" && cfg.Users.Users[index].Name != "" {
+			cfg.Users.Users[index].Home = "/home/" + cfg.Users.Users[index].Name
+		}
+	}
+	for index := range cfg.Files.Files {
+		if cfg.Files.Files[index].Chmod == "" {
+			cfg.Files.Files[index].Chmod = "640"
+		}
+	}
+	for index := range cfg.Templates.Templates {
+		if cfg.Templates.Templates[index].Chmod == "" {
+			cfg.Templates.Templates[index].Chmod = "640"
 		}
 	}
 }

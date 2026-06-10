@@ -21,7 +21,7 @@ func TestWifiEnabledCreatesConfig(t *testing.T) {
 		Country:      "US",
 		Directory:    wifiDir,
 	}
-	wifi := NewWifiModule(cfg, servicesDir)
+	wifi := New(cfg, servicesDir)
 	result := wifi.Run(context.Background(), false)
 
 	if !result.Success {
@@ -71,7 +71,7 @@ func TestWifiEnabledDryRun(t *testing.T) {
 		Country:      "US",
 		Directory:    wifiDir,
 	}
-	wifi := NewWifiModule(cfg, servicesDir)
+	wifi := New(cfg, servicesDir)
 	result := wifi.Run(context.Background(), true)
 
 	if !result.Success {
@@ -100,7 +100,7 @@ func TestWifiDisabledRemovesSentinel(t *testing.T) {
 		Enabled:   false,
 		Directory: t.TempDir(),
 	}
-	wifi := NewWifiModule(cfg, servicesDir)
+	wifi := New(cfg, servicesDir)
 	result := wifi.Run(context.Background(), false)
 
 	if !result.Success {
@@ -117,7 +117,7 @@ func TestWifiDisabledDryRun(t *testing.T) {
 		Enabled:   false,
 		Directory: t.TempDir(),
 	}
-	wifi := NewWifiModule(cfg, t.TempDir())
+	wifi := New(cfg, t.TempDir())
 	result := wifi.Run(context.Background(), true)
 
 	if !result.Success {
@@ -136,7 +136,7 @@ func TestWifiDisabledNoSentinelToRemove(t *testing.T) {
 		Enabled:   false,
 		Directory: t.TempDir(),
 	}
-	wifi := NewWifiModule(cfg, servicesDir)
+	wifi := New(cfg, servicesDir)
 	result := wifi.Run(context.Background(), false)
 
 	if !result.Success {
@@ -159,7 +159,7 @@ func TestWifiConfigContent(t *testing.T) {
 		Country:      "DE",
 		Directory:    wifiDir,
 	}
-	wifi := NewWifiModule(cfg, servicesDir)
+	wifi := New(cfg, servicesDir)
 	result := wifi.Run(context.Background(), false)
 
 	if !result.Success {
@@ -198,7 +198,7 @@ func TestWifiEnabledCreatesDirs(t *testing.T) {
 		Country:      "GB",
 		Directory:    wifiDir,
 	}
-	wifi := NewWifiModule(cfg, servicesDir)
+	wifi := New(cfg, servicesDir)
 	result := wifi.Run(context.Background(), false)
 
 	if !result.Success {
@@ -241,7 +241,7 @@ func TestWifiDisabledRemovesConfigSentinelOnly(t *testing.T) {
 		Enabled:   false,
 		Directory: wifiDir,
 	}
-	wifi := NewWifiModule(cfg, servicesDir)
+	wifi := New(cfg, servicesDir)
 	result := wifi.Run(context.Background(), false)
 
 	if !result.Success {

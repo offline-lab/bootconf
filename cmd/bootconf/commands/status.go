@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -31,8 +30,7 @@ By default shows a summary. Use flags to filter or show details.`,
 			}
 		}
 
-		statusDir := filepath.Join(basedir, ".bootconf")
-		runStatus, err := status.Read(statusDir)
+		runStatus, err := status.Read(basedir)
 		if err != nil {
 			fmt.Println("no status found")
 			os.Exit(0)
@@ -124,8 +122,8 @@ func printSections(sections []status.SectionStatus, full bool) {
 	}
 }
 
-func boolStr(val bool) string {
-	if val {
+func boolStr(success bool) string {
+	if success {
 		return "PASS"
 	}
 	return "FAIL"

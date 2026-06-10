@@ -21,7 +21,7 @@ func TestSSHEnabledCreatesSentinel(t *testing.T) {
 		Directory:        sshDir,
 	}
 
-	module := NewSSHModule(cfg, servicesDir)
+	module := New(cfg, servicesDir)
 	result := module.Run(context.Background(), false)
 
 	if !result.Success {
@@ -46,7 +46,7 @@ func TestSSHEnabledDryRun(t *testing.T) {
 		Directory:        sshDir,
 	}
 
-	module := NewSSHModule(cfg, servicesDir)
+	module := New(cfg, servicesDir)
 	result := module.Run(context.Background(), true)
 
 	if !result.Success {
@@ -82,7 +82,7 @@ func TestSSHDisabledRemovesSentinel(t *testing.T) {
 		Directory: t.TempDir(),
 	}
 
-	module := NewSSHModule(cfg, servicesDir)
+	module := New(cfg, servicesDir)
 	result := module.Run(context.Background(), false)
 
 	if !result.Success {
@@ -108,7 +108,7 @@ func TestSSHDisabledDryRun(t *testing.T) {
 		Directory: t.TempDir(),
 	}
 
-	module := NewSSHModule(cfg, servicesDir)
+	module := New(cfg, servicesDir)
 	result := module.Run(context.Background(), true)
 
 	if !result.Success {
@@ -129,7 +129,7 @@ func TestSSHInvalidDaemon(t *testing.T) {
 		Directory: t.TempDir(),
 	}
 
-	module := NewSSHModule(cfg, t.TempDir())
+	module := New(cfg, t.TempDir())
 	result := module.Run(context.Background(), false)
 
 	if result.Success {
@@ -150,7 +150,7 @@ func TestSSHDisabledDoesNotValidateDaemon(t *testing.T) {
 		Directory: t.TempDir(),
 	}
 
-	module := NewSSHModule(cfg, servicesDir)
+	module := New(cfg, servicesDir)
 	result := module.Run(context.Background(), false)
 
 	if !result.Success {
@@ -179,7 +179,7 @@ func TestSSHExistingHostKeyNotRegenerated(t *testing.T) {
 		Directory:        sshDir,
 	}
 
-	module := NewSSHModule(cfg, servicesDir)
+	module := New(cfg, servicesDir)
 	result := module.Run(context.Background(), false)
 
 	if !result.Success {
@@ -214,7 +214,7 @@ func TestSSHEnabledNoHostKeyGeneration(t *testing.T) {
 		Directory:        sshDir,
 	}
 
-	module := NewSSHModule(cfg, servicesDir)
+	module := New(cfg, servicesDir)
 	result := module.Run(context.Background(), false)
 
 	if !result.Success {
@@ -247,7 +247,7 @@ func TestSSHSentinelDirCreated(t *testing.T) {
 		Directory:        sshDir,
 	}
 
-	module := NewSSHModule(cfg, servicesDir)
+	module := New(cfg, servicesDir)
 	result := module.Run(context.Background(), false)
 
 	if !result.Success {
@@ -279,7 +279,7 @@ func TestSSHDisabledRemovesSentinelEvenIfMissing(t *testing.T) {
 		Directory: t.TempDir(),
 	}
 
-	module := NewSSHModule(cfg, servicesDir)
+	module := New(cfg, servicesDir)
 	result := module.Run(context.Background(), false)
 
 	if !result.Success {
