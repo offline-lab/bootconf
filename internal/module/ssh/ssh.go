@@ -8,11 +8,12 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/offline-lab/bootconf/internal/config"
+	"github.com/offline-lab/bootconf/internal/logging"
 	"github.com/offline-lab/bootconf/internal/module"
+	"github.com/offline-lab/bootconf/internal/run"
 )
 
 // SSHModule manages SSH host key generation and service enable/disable
@@ -34,8 +35,8 @@ type SSHModule struct {
 	servicesDir      string
 }
 
-// NewSSHModule creates an SSHModule from the given SSH config and services directory.
-func NewSSHModule(cfg config.SSHConfig, servicesDir string) *SSHModule {
+// New creates an SSHModule from the given SSH config and services directory.
+func New(cfg config.SSHConfig, servicesDir string) *SSHModule {
 	return &SSHModule{
 		daemon:           cfg.Daemon,
 		keytype:          cfg.Keytype,
@@ -47,82 +48,83 @@ func NewSSHModule(cfg config.SSHConfig, servicesDir string) *SSHModule {
 }
 
 // Name returns the module identifier "ssh".
-func (m *SSHModule) Name() string { return "ssh" }
+func (sshModule *SSHModule) Name() string { return "ssh" }
 
 // Run enables or disables SSH based on configuration, generating host keys if needed.
-func (m *SSHModule) Run(ctx context.Context, dryRun bool) module.Result {
-	sentinelPath := filepath.Join(m.servicesDir, "ssh")
+func (sshModule *SSHModule) Run(ctx context.Context, dryRun bool) module.Result {
+	sentinelPath := filepath.Join(sshModule.servicesDir, "ssh")
 
-	if !m.enabled {
-		if !dryRun {
-			removeSentinel(sentinelPath)
+	if !sshModule.enabled {
+		logging.Info(sshModule.Name(), "disabling ssh, removing sentinel %s", sentinelPath)
+		if dryRun {
+			logging.Info(sshModule.Name(), "would remove %s (dry-run)", sentinelPath)
+		} else {
+			if err := os.Remove(sentinelPath); err != nil && !os.IsNotExist(err) {
+				logging.Warn(sshModule.Name(), "failed to remove sentinel %s: %v", sentinelPath, err)
+			}
 		}
-
-		return module.Result{Section: m.Name(), Success: true, Message: "ssh disabled"}
+		return module.Result{Section: sshModule.Name(), Success: true, Message: "ssh disabled"}
 	}
 
-	if m.daemon != "dropbear" && m.daemon != "openssh" {
-		return module.Result{Section: m.Name(), Success: false, Error: fmt.Sprintf("invalid daemon %q: must be \"dropbear\" or \"openssh\"", m.daemon)}
+	if sshModule.daemon != "dropbear" && sshModule.daemon != "openssh" {
+		err := fmt.Sprintf("invalid daemon %q: must be dropbear or openssh", sshModule.daemon)
+		logging.Error(sshModule.Name(), "%s", err)
+		return module.Result{Section: sshModule.Name(), Success: false, Error: err}
 	}
 
-	hostKeyPath := filepath.Join(m.sshDir, "hostkey")
+	hostKeyPath := filepath.Join(sshModule.sshDir, "hostkey")
 
-	if m.generateHostKeys {
+	if sshModule.generateHostKeys {
 		if _, err := os.Stat(hostKeyPath); os.IsNotExist(err) {
 			if dryRun {
-				return module.Result{Section: m.Name(), Success: true, Message: "ssh enabled (dry-run: skipped host key generation)"}
+				logging.Info(sshModule.Name(), "would generate host key at %s using %s (dry-run)", hostKeyPath, sshModule.daemon)
+			} else {
+				logging.Info(sshModule.Name(), "generating host key at %s using %s", hostKeyPath, sshModule.daemon)
+				if err := sshModule.generateHostKey(ctx, hostKeyPath); err != nil {
+					logging.Error(sshModule.Name(), "failed to generate host key: %v", err)
+					return module.Result{Section: sshModule.Name(), Success: false, Error: err.Error()}
+				}
 			}
-
-			if err := m.generateHostKey(ctx, hostKeyPath); err != nil {
-				return module.Result{Section: m.Name(), Success: false, Error: err.Error()}
-			}
+		} else {
+			logging.Debug(sshModule.Name(), "host key already exists at %s, skipping generation", hostKeyPath)
 		}
 	}
 
-	if !dryRun {
-		if err := writeSentinel(sentinelPath); err != nil {
-			return module.Result{Section: m.Name(), Success: false, Error: err.Error()}
-		}
-	}
-
-	return module.Result{Section: m.Name(), Success: true, Message: "ssh enabled"}
-}
-
-// generateHostKey creates the SSH host key directory and generates a new key using the daemon-appropriate tool (dropbearkey or ssh-keygen).
-func (m *SSHModule) generateHostKey(ctx context.Context, keyPath string) error {
-	if err := os.MkdirAll(m.sshDir, 0700); err != nil {
-		return fmt.Errorf("failed to create ssh directory: %w", err)
-	}
-
-	var cmd *exec.Cmd
-
-	if m.daemon == "dropbear" {
-		cmd = exec.CommandContext(ctx, "dropbearkey", "-t", m.keytype, "-f", keyPath)
+	if dryRun {
+		logging.Info(sshModule.Name(), "would write sentinel %s (dry-run)", sentinelPath)
 	} else {
-		cmd = exec.CommandContext(ctx, "ssh-keygen", "-t", m.keytype, "-f", keyPath, "-N", "")
+		logging.Info(sshModule.Name(), "writing sentinel %s", sentinelPath)
+		if err := writeSentinel(sentinelPath); err != nil {
+			logging.Error(sshModule.Name(), "failed to write sentinel: %v", err)
+			return module.Result{Section: sshModule.Name(), Success: false, Error: err.Error()}
+		}
 	}
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to generate host key: %w", err)
+	if dryRun {
+		return module.Result{Section: sshModule.Name(), Success: true, Message: "ssh enabled (dry-run)"}
 	}
-
-	return nil
+	return module.Result{Section: sshModule.Name(), Success: true, Message: "ssh enabled"}
 }
 
-// writeSentinel creates the sentinel file and its parent directory. The sentinel signals the init system to enable this service.
+func (sshModule *SSHModule) generateHostKey(ctx context.Context, keyPath string) error {
+	if err := os.MkdirAll(sshModule.sshDir, 0700); err != nil {
+		return fmt.Errorf("create ssh directory %s: %w", sshModule.sshDir, err)
+	}
+
+	if sshModule.daemon == "dropbear" {
+		return run.Command(ctx, "dropbearkey", "-t", sshModule.keytype, "-f", keyPath)
+	}
+	return run.Command(ctx, "ssh-keygen", "-t", sshModule.keytype, "-f", keyPath, "-N", "")
+}
+
+// writeSentinel creates the sentinel file signalling the init system to enable
+// the SSH daemon. The parent directory is created if it does not yet exist.
 func writeSentinel(path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
-		return fmt.Errorf("failed to create services directory: %w", err)
+		return fmt.Errorf("create services directory: %w", err)
 	}
-
 	if err := os.WriteFile(path, []byte{}, 0640); err != nil {
-		return fmt.Errorf("failed to create sentinel file: %w", err)
+		return fmt.Errorf("write sentinel %s: %w", path, err)
 	}
-
 	return nil
-}
-
-// removeSentinel removes the sentinel file, signaling the init system to disable this service. Missing files are silently ignored.
-func removeSentinel(path string) {
-	_ = os.Remove(path)
 }

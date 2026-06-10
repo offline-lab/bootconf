@@ -44,22 +44,22 @@ func runCheck(_ *cobra.Command, _ []string) {
 	}
 
 	checks := buildHealthChecks(cfg)
-	tbl := output.NewTable("Section", "Status", "Detail")
+	table := output.NewTable("Section", "Status", "Detail")
 
 	passCount := 0
 	failCount := 0
 
-	for _, hc := range checks {
-		if err := hc.check(); err != nil {
-			tbl.AddRow(hc.label, "FAIL", err.Error())
+	for _, entry := range checks {
+		if err := entry.check(); err != nil {
+			table.AddRow(entry.label, "FAIL", err.Error())
 			failCount++
 		} else {
-			tbl.AddRow(hc.label, "PASS", "")
+			table.AddRow(entry.label, "PASS", "")
 			passCount++
 		}
 	}
 
-	tbl.Render()
+	table.Render()
 	fmt.Printf("\n%d check(s): %d passed, %d failed\n", passCount+failCount, passCount, failCount)
 
 	if failCount > 0 {
@@ -90,22 +90,22 @@ func buildHealthChecks(cfg *config.Config) []healthCheck {
 		})
 	}
 
-	for _, svc := range cfg.Services.Services {
-		if svc.Enabled {
-			name := svc.Name
+	for _, service := range cfg.Services.Services {
+		if service.Enabled {
+			serviceName := service.Name
 			checks = append(checks, healthCheck{
-				label: "service/" + name,
-				check: func() error { return checkActiveService(name) },
+				label: "service/" + serviceName,
+				check: func() error { return checkActiveService(serviceName) },
 			})
 		}
 	}
 
 	for _, user := range cfg.Users.Users {
 		if user.Enabled {
-			name := user.Name
+			userName := user.Name
 			checks = append(checks, healthCheck{
-				label: "user/" + name,
-				check: func() error { return checkUserExists(name) },
+				label: "user/" + userName,
+				check: func() error { return checkUserExists(userName) },
 			})
 		}
 	}

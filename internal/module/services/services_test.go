@@ -22,7 +22,7 @@ func TestServicesEnableCreatesSentinel(t *testing.T) {
 		},
 	}
 
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if !result.Success {
@@ -54,7 +54,7 @@ func TestServicesDisableRemovesSentinel(t *testing.T) {
 			{Name: "telnetd", Enabled: false, Sentinel: true},
 		},
 	}
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if !result.Success {
@@ -78,7 +78,7 @@ func TestServicesSentinelFalseNoFile(t *testing.T) {
 		},
 	}
 
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if !result.Success {
@@ -111,7 +111,7 @@ func TestServicesDisabledSentinelFalseNoRemove(t *testing.T) {
 		},
 	}
 
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if !result.Success {
@@ -157,7 +157,7 @@ func TestServicesCopyDefaultConfig(t *testing.T) {
 		},
 	}
 
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if !result.Success {
@@ -211,7 +211,7 @@ func TestServicesCopyExistingFileGetsNewSuffix(t *testing.T) {
 			},
 		},
 	}
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if !result.Success {
@@ -258,7 +258,7 @@ func TestServicesCopyMissingSource(t *testing.T) {
 		},
 	}
 
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if result.Success {
@@ -299,7 +299,7 @@ func TestServicesDryRunNoWrites(t *testing.T) {
 		},
 	}
 
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), true)
 
 	if !result.Success {
@@ -323,7 +323,7 @@ func TestServicesEmptyList(t *testing.T) {
 		Enabled:   true,
 		Directory: filepath.Join(dir, "services"),
 	}
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 
 	result := svc.Run(context.Background(), false)
 
@@ -347,7 +347,7 @@ func TestServicesModuleDisabled(t *testing.T) {
 		},
 	}
 
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if !result.Success {
@@ -385,7 +385,7 @@ func TestServicesMultipleServices(t *testing.T) {
 		},
 	}
 
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if !result.Success {
@@ -455,7 +455,7 @@ func TestServicesMultipleEnabledWithCopy(t *testing.T) {
 		},
 	}
 
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if !result.Success {
@@ -517,7 +517,7 @@ func TestServicesCopyCreatesDestinationDir(t *testing.T) {
 		},
 	}
 
-	svc := NewServicesModule(svcConfig)
+	svc := New(svcConfig)
 	result := svc.Run(context.Background(), false)
 
 	if !result.Success {

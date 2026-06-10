@@ -5,8 +5,10 @@ import (
 	"testing"
 )
 
-func TestLoad(t *testing.T) {
-	content := `
+// testConfigYAML is the complete YAML fixture for TestLoad. It covers every
+// config section so that a new field added without a corresponding assertion
+// will be obvious.
+const testConfigYAML = `
 bootconf:
   enabled: true
   directory: /test/bootconf
@@ -54,129 +56,126 @@ files:
       destination: test/test.conf
       chmod: "644"
 `
-	tmpFile, err := os.CreateTemp("", "bootconf-test-*.yaml")
+
+// mustLoadYAML writes content to a temp file and calls Load, failing the test
+// on any error. It is the standard fixture loader for config package tests.
+func mustLoadYAML(t *testing.T, content string) *Config {
+	t.Helper()
+	f, err := os.CreateTemp("", "bootconf-test-*.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-
-	if _, err := tmpFile.WriteString(content); err != nil {
+	defer func() { _ = os.Remove(f.Name()) }()
+	if _, err := f.WriteString(content); err != nil {
 		t.Fatal(err)
 	}
-	if err := tmpFile.Close(); err != nil {
+	if err := f.Close(); err != nil {
 		t.Fatal(err)
 	}
-
-	cfg, err := Load(tmpFile.Name())
+	cfg, err := Load(f.Name())
 	if err != nil {
 		t.Fatalf("Load() failed: %v", err)
 	}
+	return cfg
+}
 
-	if !cfg.Bootconf.Enabled {
-		t.Error("Bootconf.Enabled = false, want true")
-	}
-	if cfg.Bootconf.Directory != "/test/bootconf" {
-		t.Errorf("Bootconf.Directory = %q, want %q", cfg.Bootconf.Directory, "/test/bootconf")
-	}
-	if cfg.System.Timezone != "UTC" {
-		t.Errorf("Timezone = %q, want %q", cfg.System.Timezone, "UTC")
-	}
-	if cfg.System.Hostname != "testhost" {
-		t.Errorf("Hostname = %q, want %q", cfg.System.Hostname, "testhost")
-	}
-	if !cfg.SSH.Enabled {
-		t.Error("SSH.Enabled = false, want true")
-	}
-	if cfg.SSH.Directory != "/test/ssh" {
-		t.Errorf("SSH.Directory = %q, want %q", cfg.SSH.Directory, "/test/ssh")
-	}
-	if cfg.SSH.Keytype != "rsa" {
-		t.Errorf("SSH.Keytype = %q, want %q", cfg.SSH.Keytype, "rsa")
-	}
-	if cfg.SSH.GenerateHostKeys {
-		t.Error("SSH.GenerateHostKeys = true, want false")
-	}
-	if cfg.SSH.Daemon != "openssh" {
-		t.Errorf("SSH.Daemon = %q, want %q", cfg.SSH.Daemon, "openssh")
-	}
-	if !cfg.Wifi.Enabled {
-		t.Error("Wifi.Enabled = false, want true")
-	}
-	if cfg.Wifi.Directory != "/test/wifi" {
-		t.Errorf("Wifi.Directory = %q, want %q", cfg.Wifi.Directory, "/test/wifi")
-	}
-	if cfg.Wifi.SSID != "testnet" {
-		t.Errorf("Wifi.SSID = %q, want %q", cfg.Wifi.SSID, "testnet")
-	}
-	if cfg.Wifi.PasswordHash != "hash123" {
-		t.Errorf("Wifi.PasswordHash = %q, want %q", cfg.Wifi.PasswordHash, "hash123")
-	}
-	if cfg.Wifi.Country != "US" {
-		t.Errorf("Wifi.Country = %q, want %q", cfg.Wifi.Country, "US")
-	}
-	if !cfg.Services.Enabled {
-		t.Error("Services.Enabled = false, want true")
-	}
-	if cfg.Services.Directory != "/test/services" {
-		t.Errorf("Services.Directory = %q, want %q", cfg.Services.Directory, "/test/services")
-	}
-	if len(cfg.Services.Services) != 1 {
-		t.Fatalf("Services length = %d, want 1", len(cfg.Services.Services))
-	}
-	svc := cfg.Services.Services[0]
-	if svc.Name != "disco" {
-		t.Errorf("Service Name = %q, want %q", svc.Name, "disco")
-	}
-	if !svc.Enabled {
-		t.Error("Service Enabled = false, want true")
-	}
-	if !svc.Sentinel {
-		t.Error("Service Sentinel = false, want true")
-	}
-	if !svc.DefaultConfig.Copy {
-		t.Error("Service DefaultConfig.Copy = false, want true")
-	}
-	if svc.DefaultConfig.Source != "/etc/disco/disco.conf" {
-		t.Errorf("Service DefaultConfig.Source = %q, want %q", svc.DefaultConfig.Source, "/etc/disco/disco.conf")
-	}
-	if svc.DefaultConfig.Destination != "/data/config/disco/disco.conf" {
-		t.Errorf("Service DefaultConfig.Destination = %q, want %q", svc.DefaultConfig.Destination, "/data/config/disco/disco.conf")
-	}
-	if cfg.Users.Directory != "/test/users" {
-		t.Errorf("Users.Directory = %q, want %q", cfg.Users.Directory, "/test/users")
-	}
-	if len(cfg.Users.Users) != 1 {
-		t.Fatalf("Users length = %d, want 1", len(cfg.Users.Users))
-	}
-	usr := cfg.Users.Users[0]
-	if usr.Name != "admin" {
-		t.Errorf("User Name = %q, want %q", usr.Name, "admin")
-	}
-	if !usr.Enabled {
-		t.Error("User Enabled = false, want true")
-	}
-	if !usr.Sudo {
-		t.Error("User Sudo = false, want true")
-	}
-	if usr.Home != "/data/home/admin" {
-		t.Errorf("User Home = %q, want %q", usr.Home, "/data/home/admin")
-	}
-	if len(usr.AuthorizedKeys) != 1 || usr.AuthorizedKeys[0] != "ssh-ed25519 AAAA test@host" {
-		t.Errorf("User AuthorizedKeys = %v, want [ssh-ed25519 AAAA test@host]", usr.AuthorizedKeys)
-	}
-	if len(cfg.Files.Files) != 1 {
-		t.Fatalf("Files length = %d, want 1", len(cfg.Files.Files))
-	}
-	fileEntry := cfg.Files.Files[0]
-	if fileEntry.Source != "/boot/firmware/config/test.conf" {
-		t.Errorf("File Source = %q, want %q", fileEntry.Source, "/boot/firmware/config/test.conf")
-	}
-	if fileEntry.Destination != "test/test.conf" {
-		t.Errorf("File Destination = %q, want %q", fileEntry.Destination, "test/test.conf")
-	}
-	if fileEntry.Chmod != "644" {
-		t.Errorf("File Chmod = %q, want %q", fileEntry.Chmod, "644")
-	}
+// TestLoad verifies that every section of a fully-populated YAML config is
+// parsed and mapped correctly. Each section is isolated in its own sub-test
+// so failures are easy to locate without wading through a wall of assertions.
+func TestLoad(t *testing.T) {
+	cfg := mustLoadYAML(t, testConfigYAML)
+
+	t.Run("bootconf", func(t *testing.T) {
+		want := BootconfConfig{Enabled: true, Directory: "/test/bootconf"}
+		if cfg.Bootconf != want {
+			t.Errorf("got %+v, want %+v", cfg.Bootconf, want)
+		}
+	})
+
+	t.Run("system", func(t *testing.T) {
+		want := SystemConfig{Enabled: true, Timezone: "UTC", Hostname: "testhost"}
+		if cfg.System != want {
+			t.Errorf("got %+v, want %+v", cfg.System, want)
+		}
+	})
+
+	t.Run("ssh", func(t *testing.T) {
+		want := SSHConfig{
+			Enabled:          true,
+			Directory:        "/test/ssh",
+			Keytype:          "rsa",
+			GenerateHostKeys: false,
+			Daemon:           "openssh",
+		}
+		if cfg.SSH != want {
+			t.Errorf("got %+v, want %+v", cfg.SSH, want)
+		}
+	})
+
+	t.Run("wifi", func(t *testing.T) {
+		want := WifiConfig{
+			Enabled:      true,
+			Directory:    "/test/wifi",
+			SSID:         "testnet",
+			PasswordHash: "hash123",
+			Country:      "US",
+		}
+		if cfg.Wifi != want {
+			t.Errorf("got %+v, want %+v", cfg.Wifi, want)
+		}
+	})
+
+	t.Run("services", func(t *testing.T) {
+		if !cfg.Services.Enabled || cfg.Services.Directory != "/test/services" {
+			t.Errorf("header: enabled=%v dir=%q", cfg.Services.Enabled, cfg.Services.Directory)
+		}
+		if len(cfg.Services.Services) != 1 {
+			t.Fatalf("count: got %d, want 1", len(cfg.Services.Services))
+		}
+		want := ServiceEntry{
+			Name:     "disco",
+			Enabled:  true,
+			Sentinel: true,
+			DefaultConfig: DefaultConfig{
+				Copy:        true,
+				Source:      "/etc/disco/disco.conf",
+				Destination: "/data/config/disco/disco.conf",
+			},
+		}
+		if cfg.Services.Services[0] != want {
+			t.Errorf("Services[0]: got %+v, want %+v", cfg.Services.Services[0], want)
+		}
+	})
+
+	t.Run("users", func(t *testing.T) {
+		if !cfg.Users.Enabled || cfg.Users.Directory != "/test/users" {
+			t.Errorf("header: enabled=%v dir=%q", cfg.Users.Enabled, cfg.Users.Directory)
+		}
+		if len(cfg.Users.Users) != 1 {
+			t.Fatalf("count: got %d, want 1", len(cfg.Users.Users))
+		}
+		u := cfg.Users.Users[0]
+		if u.Name != "admin" || !u.Enabled || !u.Sudo || u.Home != "/data/home/admin" {
+			t.Errorf("core fields: name=%q enabled=%v sudo=%v home=%q", u.Name, u.Enabled, u.Sudo, u.Home)
+		}
+		if len(u.AuthorizedKeys) != 1 || u.AuthorizedKeys[0] != "ssh-ed25519 AAAA test@host" {
+			t.Errorf("authorized_keys: got %v, want [ssh-ed25519 AAAA test@host]", u.AuthorizedKeys)
+		}
+	})
+
+	t.Run("files", func(t *testing.T) {
+		if len(cfg.Files.Files) != 1 {
+			t.Fatalf("count: got %d, want 1", len(cfg.Files.Files))
+		}
+		want := FileEntry{
+			Source:      "/boot/firmware/config/test.conf",
+			Destination: "test/test.conf",
+			Chmod:       "644",
+		}
+		if cfg.Files.Files[0] != want {
+			t.Errorf("Files[0]: got %+v, want %+v", cfg.Files.Files[0], want)
+		}
+	})
 }
 
 func TestLoadMissing(t *testing.T) {
@@ -224,6 +223,20 @@ func TestSetDefaults(t *testing.T) {
 	cfg.SetDefaults()
 	if cfg.Files.Files[0].Chmod != "640" {
 		t.Errorf("FileEntry.Chmod default = %q, want %q", cfg.Files.Files[0].Chmod, "640")
+	}
+
+	cfg.Users = UsersConfig{Users: []UserEntry{{Name: "alice", Enabled: true}}}
+	cfg.SetDefaults()
+	if cfg.Users.Users[0].Home != "/home/alice" {
+		t.Errorf("UserEntry.Home default = %q, want %q", cfg.Users.Users[0].Home, "/home/alice")
+	}
+
+	explicitHome := &Config{
+		Users: UsersConfig{Users: []UserEntry{{Name: "bob", Home: "/custom/home/bob"}}},
+	}
+	explicitHome.SetDefaults()
+	if explicitHome.Users.Users[0].Home != "/custom/home/bob" {
+		t.Errorf("UserEntry.Home = %q, want %q (should not overwrite)", explicitHome.Users.Users[0].Home, "/custom/home/bob")
 	}
 
 	explicitCfg := &Config{

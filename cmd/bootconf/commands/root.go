@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-
-	"github.com/offline-lab/bootconf/internal/version"
 )
 
 var (
@@ -16,19 +14,20 @@ var (
 
 var rootCmd = &cobra.Command{
 	Use:   "bootconf",
-	Short: "Configure a readonly OS at boot time",
-	Long: `Bootconf reads a YAML configuration file and prepares a readonly Linux
-system at boot time, before other services start. It applies network settings,
-hostname, SSH keys, and other system configuration from a single config file.`,
+	Short: "Declarative boot configuration for Linux",
+	Long: `Bootconf reads a YAML configuration file and applies system settings
+during early boot, before other services start. It manages hostname, timezone,
+SSH host keys, WiFi credentials, user accounts, service sentinel files, and
+arbitrary file provisioning — on every boot, from a single config file.`,
 }
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(_ *cobra.Command, _ []string) {
-		fmt.Printf("bootconf %s\n", version.Version)
-		fmt.Printf("  Commit:    %s\n", version.Commit)
-		fmt.Printf("  Built:     %s\n", version.BuildTime)
+		fmt.Printf("bootconf %s\n", Version)
+		fmt.Printf("  Commit:    %s\n", Commit)
+		fmt.Printf("  Built:     %s\n", BuildTime)
 	},
 }
 

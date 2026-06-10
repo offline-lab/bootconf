@@ -1,6 +1,6 @@
 // Package status reads and writes the JSON status file that records the
 // outcome of the last bootconf run. The status directory lives at
-// <bootconf.directory>/.bootconf/ and contains status.json.
+// <bootconf.directory>/ and contains status.json.
 package status
 
 import (
@@ -26,11 +26,11 @@ type RunStatus struct {
 }
 
 // Write persists a RunStatus as JSON to <dir>/status.json.
-func Write(dir string, s *RunStatus) error {
-	if err := os.MkdirAll(dir, 0755); err != nil {
+func Write(dir string, runStatus *RunStatus) error {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create status dir: %w", err)
 	}
-	data, err := json.MarshalIndent(s, "", "  ")
+	data, err := json.MarshalIndent(runStatus, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal status: %w", err)
 	}
@@ -49,10 +49,10 @@ func Read(dir string) (*RunStatus, error) {
 		return nil, fmt.Errorf("failed to read status: %w", err)
 	}
 
-	var s RunStatus
-	if err := json.Unmarshal(data, &s); err != nil {
+	var runStatus RunStatus
+	if err := json.Unmarshal(data, &runStatus); err != nil {
 		return nil, fmt.Errorf("failed to parse status: %w", err)
 	}
 
-	return &s, nil
+	return &runStatus, nil
 }

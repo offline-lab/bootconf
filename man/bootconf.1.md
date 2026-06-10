@@ -4,7 +4,7 @@
 
 # NAME
 
-bootconf - configure a readonly Linux OS at boot time
+bootconf - declarative boot configuration for Linux
 
 # SYNOPSIS
 
@@ -13,13 +13,13 @@ bootconf - configure a readonly Linux OS at boot time
 # DESCRIPTION
 
 Bootconf reads a YAML configuration file and applies system settings
-during early boot on a readonly Linux appliance. It handles hostname,
+during early boot, before other services start. It handles hostname,
 timezone, SSH host keys, WiFi credentials, user accounts, service
 sentinel files, and arbitrary file provisioning.
 
-The tool is designed to run once at boot before other services start.
-It writes status to a JSON file so downstream tooling can verify
-success.
+It runs on every boot, so configuration changes take effect on the
+next reboot without reinstalling or reimaging the system. It writes
+status to a JSON file so downstream tooling can verify success.
 
 # COMMANDS
 
