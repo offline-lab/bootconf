@@ -43,7 +43,7 @@ When `generate_host_keys: true` and no key exists at `<directory>/hostkey`:
 | `dropbear` | `dropbearkey -t <keytype> -f <directory>/hostkey` |
 | `openssh` | `ssh-keygen -t <keytype> -f <directory>/hostkey -N ""` |
 
-Existing host keys are **never** overwritten. The check is a stat on the key file — if it exists, generation is skipped.
+Existing host keys are **never** overwritten. The check is a stat on the key file; if it exists, generation is skipped.
 
 The host key is written with mode `0600`. The `<directory>` is created with mode `0700` if it does not exist.
 

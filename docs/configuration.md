@@ -12,6 +12,18 @@ bootconf:
   enabled: true
   # Status files are written here after each run.
   directory: /var/lib/bootconf
+  # Execution order for modules. Modules run sequentially in this order.
+  # Omit to use the default order below.
+  order:
+    - system
+    - users
+    - wifi
+    - ssh
+    - services
+    - files
+    - templates
+    - unitrun
+    - shell
 
 # ─── system ──────────────────────────────────────────────────────────────────
 system:
@@ -63,6 +75,9 @@ users:
   enabled: true
   # sysusers .conf files are written here.
   directory: /etc/bootconf/users
+  # tmpfiles.d .conf files are written here. Each file contains a C directive
+  # that copies /etc/skel into the home directory on first creation.
+  tmpfiles_dir: /data/config/tmpfiles
   users:
     - name: admin
       enabled: true
@@ -144,6 +159,7 @@ unitrun:
 |-------|------|---------|-------------|
 | `enabled` | bool | `false` | If false, the tool exits immediately without running any module |
 | `directory` | string | `/data/bootconf` | Directory for status files |
+| `order` | list | see below | Module execution order. Modules run sequentially in the listed order. Each entry must be a known module name; duplicates are rejected. Default: `system`, `users`, `wifi`, `ssh`, `services`, `files`, `templates`, `unitrun`, `shell`. |
 
 ### system
 
@@ -192,6 +208,7 @@ unitrun:
 |-------|------|---------|-------------|
 | `enabled` | bool | | Enable the module |
 | `directory` | string | | Where sysusers `.conf` files are written |
+| `tmpfiles_dir` | string | `/data/config/tmpfiles` | Where tmpfiles.d `.conf` files are written; used to copy `/etc/skel` into each home directory |
 | `users[].name` | string | | Username |
 | `users[].enabled` | bool | | Provision or remove the user |
 | `users[].sudo` | bool | | Add to the `sudo` group |

@@ -43,8 +43,9 @@ func validConfig() *Config {
 			},
 		},
 		Users: UsersConfig{
-			Enabled:   true,
-			Directory: "/data/config/users",
+			Enabled:     true,
+			Directory:   "/data/config/users",
+			TmpfilesDir: "/data/config/tmpfiles",
 			Users: []UserEntry{
 				{
 					Name:    "admin",

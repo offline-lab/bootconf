@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/offline-lab/bootconf/internal/config"
+	"github.com/offline-lab/bootconf/internal/registry"
 )
 
 var validateCmd = &cobra.Command{
@@ -29,7 +30,14 @@ func validateConfig(_ *cobra.Command, _ []string) {
 		os.Exit(1)
 	}
 
+	registry.ApplyDefaults(cfg)
+
 	if err := cfg.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "validation error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := registry.Validate(cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "validation error: %v\n", err)
 		os.Exit(1)
 	}

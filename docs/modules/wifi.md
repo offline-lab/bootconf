@@ -62,7 +62,7 @@ network={
 }
 ```
 
-The wifi config **is always overwritten** on each boot. This makes it the authoritative source — changing the config file takes effect on the next reboot.
+The wifi config **is always overwritten** on each boot. This makes it the authoritative source; changing the config file takes effect on the next reboot.
 
 ## Sentinel file
 

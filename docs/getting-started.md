@@ -92,7 +92,7 @@ Test your config without touching the system:
 bootconf run --dry-run
 ```
 
-Dry-run traverses the full code path and catches template syntax errors, missing keys, and validation failures — but skips all file writes and command execution.
+Dry-run traverses the full code path and catches template syntax errors, missing keys, and validation failures, but skips all file writes and command execution.
 
 Apply the configuration:
 

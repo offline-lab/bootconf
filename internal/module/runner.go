@@ -2,13 +2,12 @@ package module
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"github.com/offline-lab/bootconf/internal/logging"
 )
 
-// Runner executes all modules concurrently and collects results in declaration order.
+// Runner executes modules sequentially and collects their results.
 type Runner struct {
 	modules []Module
 }
@@ -18,9 +17,9 @@ func NewRunner(modules []Module) *Runner {
 	return &Runner{modules: modules}
 }
 
-// Run executes each module concurrently in its own goroutine. Results are
-// returned in the same order as the module list regardless of completion order.
-// If section is non-empty, only the matching module runs.
+// Run executes each module in order, one at a time. Results are returned in
+// the same order as the module list. If section is non-empty, only the
+// matching module runs.
 func (runner *Runner) Run(ctx context.Context, dryRun bool, section string) []Result {
 	var active []Module
 	for _, mod := range runner.modules {
@@ -30,21 +29,14 @@ func (runner *Runner) Run(ctx context.Context, dryRun bool, section string) []Re
 	}
 
 	results := make([]Result, len(active))
-	var wg sync.WaitGroup
-
 	for index, mod := range active {
-		wg.Add(1)
-		go func(index int, currentModule Module) {
-			defer wg.Done()
-			start := time.Now()
-			logging.Debug(currentModule.Name(), "starting")
-			result := currentModule.Run(ctx, dryRun)
-			result.Duration = time.Since(start).String()
-			logging.Debug(currentModule.Name(), "done in %s success=%v", result.Duration, result.Success)
-			results[index] = result
-		}(index, mod)
+		start := time.Now()
+		logging.Debug(mod.Name(), "starting")
+		result := mod.Run(ctx, dryRun)
+		result.Duration = time.Since(start).String()
+		logging.Debug(mod.Name(), "done in %s success=%v", result.Duration, result.Success)
+		results[index] = result
 	}
 
-	wg.Wait()
 	return results
 }

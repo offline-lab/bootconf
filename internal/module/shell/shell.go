@@ -106,12 +106,14 @@ func (shellModule *ShellModule) runCommand(ctx context.Context, command config.S
 	}
 
 	var stdoutBuf, stderrBuf bytes.Buffer
+
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
 
 	runErr := cmd.Run()
 
 	exitCode := 0
+
 	if runErr != nil {
 		if exitErr, ok := runErr.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
@@ -123,12 +125,14 @@ func (shellModule *ShellModule) runCommand(ctx context.Context, command config.S
 	logPath := filepath.Join(shellModule.directory, command.Name+".log")
 	logContent := fmt.Sprintf("Exit code: %d\n--- stdout ---\n%s--- stderr ---\n%s",
 		exitCode, stdoutBuf.String(), stderrBuf.String())
+
 	if err := os.WriteFile(logPath, []byte(logContent), 0640); err != nil {
 		logging.Warn(shellModule.Name(), "failed to write log %s: %v", logPath, err)
 	}
 
 	// Write firstboot sentinel after the command runs, regardless of exit code,
 	// so a failed firstboot command does not loop forever on every boot.
+
 	if command.FirstBoot {
 		if err := os.WriteFile(firstBootSentinel, []byte{}, 0640); err != nil {
 			logging.Warn(shellModule.Name(), "failed to write firstboot sentinel %s: %v", firstBootSentinel, err)
@@ -137,10 +141,13 @@ func (shellModule *ShellModule) runCommand(ctx context.Context, command config.S
 
 	if runErr != nil {
 		logging.Error(shellModule.Name(), "command %q exited with code %d", command.Name, exitCode)
+
 		if !command.AllowFail {
 			return false, fmt.Errorf("exited with code %d", exitCode)
 		}
+
 		logging.Info(shellModule.Name(), "command %q failed but allow_fail is true, continuing", command.Name)
+
 	} else {
 		logging.Info(shellModule.Name(), "command %q completed (exit 0)", command.Name)
 	}

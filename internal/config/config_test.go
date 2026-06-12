@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"reflect"
 	"testing"
 )
 
@@ -86,8 +87,13 @@ func TestLoad(t *testing.T) {
 	cfg := mustLoadYAML(t, testConfigYAML)
 
 	t.Run("bootconf", func(t *testing.T) {
-		want := BootconfConfig{Enabled: true, Directory: "/test/bootconf"}
-		if cfg.Bootconf != want {
+		// Order is populated by registry.ApplyDefaults, not config.SetDefaults,
+		// so it remains nil after Load alone.
+		want := BootconfConfig{
+			Enabled:   true,
+			Directory: "/test/bootconf",
+		}
+		if !reflect.DeepEqual(cfg.Bootconf, want) {
 			t.Errorf("got %+v, want %+v", cfg.Bootconf, want)
 		}
 	})

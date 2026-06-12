@@ -64,7 +64,7 @@ When `firstboot: true`, bootconf checks for a sentinel file at `<directory>/<nam
 - If the sentinel exists: the command is skipped silently.
 - If the sentinel does not exist: the command runs, and the sentinel is written **after** the run, regardless of exit code.
 
-This means a first-boot command that fails will not loop forever — the sentinel prevents re-execution on subsequent boots. If you want to retry a failed first-boot command, delete the sentinel file.
+A first-boot command that fails will not loop forever: the sentinel prevents re-execution on subsequent boots. If you want to retry a failed first-boot command, delete the sentinel file.
 
 ## Failure handling
 

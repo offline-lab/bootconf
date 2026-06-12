@@ -28,7 +28,7 @@ system:
 
 ## Behaviour
 
-`hostnamectl` and `timedatectl` are idempotent — applying the same value twice has no visible effect. Bootconf calls them unconditionally on every boot when the module is enabled.
+`hostnamectl` and `timedatectl` are idempotent; applying the same value twice has no visible effect. Bootconf calls them unconditionally on every boot when the module is enabled.
 
 ## Dry-run
 

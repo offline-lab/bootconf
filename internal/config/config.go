@@ -28,8 +28,9 @@ type Config struct {
 // BootconfConfig controls the overall bootconf tool: where it stores status
 // and whether it runs at all.
 type BootconfConfig struct {
-	Enabled   bool   `yaml:"enabled"`
-	Directory string `yaml:"directory"`
+	Enabled   bool     `yaml:"enabled"`
+	Directory string   `yaml:"directory"`
+	Order     []string `yaml:"order"`
 }
 
 // SystemConfig configures hostname and timezone on the target device.
@@ -83,9 +84,10 @@ type DefaultConfig struct {
 
 // UsersConfig defines user accounts to create on the target device.
 type UsersConfig struct {
-	Enabled   bool        `yaml:"enabled"`
-	Directory string      `yaml:"directory"`
-	Users     []UserEntry `yaml:"users"`
+	Enabled     bool        `yaml:"enabled"`
+	Directory   string      `yaml:"directory"`
+	TmpfilesDir string      `yaml:"tmpfiles_dir"`
+	Users       []UserEntry `yaml:"users"`
 }
 
 // UserEntry describes a single user account: name, home directory, sudo
@@ -146,9 +148,12 @@ type ShellConfig struct {
 }
 
 // UnitEntry describes a shell script to run via a generated systemd unit.
+// When FirstBoot is true, ConditionFirstBoot=yes is added to the generated
+// unit so systemd skips it after the first boot — no custom sentinel needed.
 type UnitEntry struct {
 	Name         string   `yaml:"name"`
 	Enabled      bool     `yaml:"enabled"`
+	FirstBoot    bool     `yaml:"firstboot"`
 	Dependencies []string `yaml:"dependencies"`
 	Command      string   `yaml:"command"`
 }
@@ -156,11 +161,8 @@ type UnitEntry struct {
 // UnitRunConfig defines scripts to run via generated systemd units.
 // Each enabled unit writes a script to Directory and a .service file to
 // /etc/systemd/system/, then calls systemctl enable + daemon-reload.
-// When FirstBoot is true, ConditionFirstBoot=yes is added to every generated
-// unit so systemd skips them after the first boot — no custom sentinel needed.
 type UnitRunConfig struct {
 	Enabled   bool        `yaml:"enabled"`
-	FirstBoot bool        `yaml:"firstboot"`
 	Directory string      `yaml:"directory"`
 	Path      string      `yaml:"path"`
 	Units     []UnitEntry `yaml:"units"`
@@ -185,6 +187,7 @@ func Load(path string) (*Config, error) {
 
 // SetDefaults fills in zero-valued fields with sensible defaults
 // (e.g. ed25519 key type, dropbear daemon, 640 file permissions, /home/<name> for users).
+// Bootconf.Order is NOT defaulted here; call registry.ApplyDefaults after Load.
 func (cfg *Config) SetDefaults() {
 	if cfg.Bootconf.Directory == "" {
 		cfg.Bootconf.Directory = "/data/bootconf"
@@ -194,6 +197,9 @@ func (cfg *Config) SetDefaults() {
 	}
 	if cfg.SSH.Daemon == "" {
 		cfg.SSH.Daemon = "dropbear"
+	}
+	if cfg.Users.TmpfilesDir == "" {
+		cfg.Users.TmpfilesDir = "/data/config/tmpfiles"
 	}
 	for index := range cfg.Users.Users {
 		if cfg.Users.Users[index].Home == "" && cfg.Users.Users[index].Name != "" {

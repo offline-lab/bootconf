@@ -48,11 +48,11 @@ services:
 
 When `default_config.copy: true`, bootconf copies the source file to the destination path:
 
-- If the destination already exists, the content is written alongside it as `<destination>.new` — existing config is **never overwritten**.
+- If the destination already exists, the content is written alongside it as `<destination>.new`; existing config is **never overwritten**.
 - The destination directory is created if it does not exist (mode `0750`).
 - The copied file is owned by `root:root` with mode `0640`.
 
-This is designed for first-boot provisioning of a writable config from a read-only default. After the first copy, the file is yours — bootconf will not touch it again.
+This is designed for first-boot provisioning of a writable config from a read-only default. After the first copy, the file is yours; bootconf will not touch it again.
 
 ## Dry-run
 

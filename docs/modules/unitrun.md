@@ -97,7 +97,7 @@ dependencies:
   - Conflicts=shutdown.target
 ```
 
-There is no separate DSL — use standard systemd unit keywords directly.
+There is no separate DSL. Use standard systemd unit keywords directly.
 
 ## First-boot units
 
