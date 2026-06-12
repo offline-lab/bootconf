@@ -73,7 +73,9 @@ func runBootconf(_ *cobra.Command, _ []string) {
 	totalDuration := time.Since(start)
 
 	overall := writeRunStatus(cfg.Bootconf.Directory, results)
-	printResults(results, dryRun, totalDuration)
+	if isTerminal() {
+		printResults(results, dryRun, totalDuration)
+	}
 	if !overall {
 		os.Exit(1)
 	}
@@ -126,6 +128,14 @@ func printResults(results []module.Result, dryRun bool, totalDuration time.Durat
 	table.Render()
 
 	fmt.Printf("\n%d section(s) completed in %s\n", len(results), totalDuration.Round(time.Microsecond))
+}
+
+func isTerminal() bool {
+	fi, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 func init() {
