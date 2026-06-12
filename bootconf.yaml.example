@@ -1,0 +1,263 @@
+#
+# Bootconf configuration
+#
+
+#
+# This is a full example bootconf configuration.
+# It contains all available modules and examples on how to use those.
+#
+# To use it, copy it to your config directory:
+#   $ cp bootconf.yaml.example /etc/bootconf/bootconf.yaml
+#
+# After that, you can edit your configuration, and run:
+#   $ bootconf run -c /etc/bootconf/bootconf.yaml
+#
+# For more information, see https://bootconf.offline-lab.com
+#
+
+#
+# Bootconf self configuration: Change bootconf behaviour.
+#
+bootconf:
+  #
+  # Enable / Disable running: If set to false, we only log and exit
+  enabled: true
+  #
+  # Where to store bootconf status database
+  directory: /data/config/bootconf
+  #
+  # Module execution order.
+  # The modules are executed sequentially in the order as defined below.
+  # To exclude modules, leave them out of this list.
+  #
+  # Some modules can depend on each other based on the configuration of the
+  # modules. For example if you want to create a file and run a shell command
+  # that needs this file, make sure shell is below files.
+  order:
+  - system
+  - users
+  - wifi
+  - ssh
+  - services
+  - files
+  - templates
+  - unitrun
+  - shell
+
+#
+# System configuration
+#
+system:
+  #
+  # Enable / Disable system module at boot time.
+  enabled: true
+  #
+  # Set the timezone
+  timezone: Europe/Amsterdam
+  #
+  # Set the hostname
+  hostname: offline-lab
+
+#
+# Users configuration (Done using systemd-sysusers)
+#
+users:
+  #
+  # Enable / Disable user configuration module at boot time.
+  enabled: true
+  #
+  # Where to put the systemd-sysuser config
+  directory: /data/config/users
+  #
+  # Where to put the tmpfiles.d drop-ins (used to create home dirs)
+  tmpfiles_dir: /data/config/tmpfiles
+  #
+  # The list of users to create
+  users: []
+  #   # -- The username of the useraccount
+  # - name: offlinelab
+  #   # -- Enable / Disable the user creation
+  #   # -- If set to false, user is removed, but the homedir is kept
+  #   enabled: true
+  #   # -- Create sudo permissions for the user
+  #   # -- If set to false, the permissions are removed.
+  #   sudo: true
+  #   # -- Where the homedir of the user should be created.
+  #   # -- Only /data is persistent, /home is wiped on every boot.
+  #   home: /data/home/offlinelab
+  #   # -- The authorized keys to configure in ~user/.ssh/authorized_keys
+  #   authorized_keys: []
+  #   # - "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCY1/jmHp/cSIPfG388BbaP/kISOKnsvPiMgLYm/vUsOFIvXfxqPo5Xh5r8wfwUQrjw1iLb3DYp6FWKEzAGpJRs= flip@fliphess.com"
+
+#
+# Wifi configuration
+#
+wifi:
+  #
+  # Enable / Disable WIFI at boot time.
+  enabled: true
+  #
+  # Where to store the wifi config
+  directory: /data/config/wifi
+  #
+  # Configure the SSID
+  ssid: something
+  #
+  # Configure the password hash
+  password_hash: 'a2b3c4d5e6f7a2b3c4d5e6f7a2b3c4d5e6f7a2b3c4d5e6f7a2b3c4d5e6f7a2b3'
+  #
+  # Configure the wifi regulator country
+  country: NL
+
+#
+# Configure SSH specifics
+#
+ssh:
+  # Enable / Disable SSH at boot time.
+  #
+  enabled: true
+  #
+  # The directory with the writeable configuration for the ssh service
+  directory: /data/config/ssh
+  #
+  # The type of key to generate for hostkey (must be supported by dropbear or openssh)
+  keytype: ed25519
+  #
+  # Generate SSH host keys at first boot (if not existent yet)
+  generate_host_keys: true
+  #
+  # Daemon: which daemon we support: can be dropbear or openssh, based on what is installed
+  daemon: dropbear
+
+#
+# Services configuration
+#
+services:
+  #
+  # Enable / Disable the services module.
+  enabled: false
+  #
+  # The directort to store sentinel files
+  # These sentinels can be used as conditional start for systemd unitfiles
+  directory: /data/config/services
+  #
+  # List of services to enable
+  services:
+  #   # -- The name of the service to enable
+  # - name: disco
+  #   # -- Enable / Disable disco-daemon at boot time
+  #   enabled: true
+  #   # -- Copy a sentinel file in place in services.directory (can be disabled)
+  #   sentinel: true
+  #   # -- Copy the default config from source to destination
+  #   default_config:
+  #     # -- Copy config file for service from source to destination
+  #     copy: true
+  #     # -- The source file to copy
+  #     source: /etc/disco/disco.conf
+  #     # -- The destination
+  #     destination: /data/config/disco/disco.conf
+
+
+#
+# Files - config files that should be moved into place
+#
+files:
+  # Enable / Disable the files module
+  enabled: false
+  # The list with files to copy / create
+  files: []
+  #   # -- The sourcefile to copy from.
+  # - source: /boot/firmware/config/disco.conf
+  #   # -- The destination to copy to
+  #   destination: /data/config/disco/disco.conf
+  #   # -- The file permissions to set for the destination
+  #   chmod: 640
+  #   # -- Alternatively, leave out `source:` and set `content:` to create a file:
+  # - destination: /data/etc/somefile
+  #   content: "Yes!"
+  #   chmod: 644
+
+#
+# Templates - Render template files in gotmpl to files
+#
+templates:
+  #
+  # Enable / Disable the templates module
+  enabled: false
+  #
+  # The list of templates to generate
+  templates: []
+  #   # -- The source / template file
+  # - source: /etc/template.tpl
+  #   # -- The destination file
+  #   destination: /data/config/disco/disco.conf
+  #   # -- Key / Value pairs to add to the render context for use in template
+  #   variables:
+  #     some: blabla
+  #     another: yes
+  #   # -- Set the file permissions
+  #   chmod: 640
+
+#
+# Shell - Run shell commands
+#
+shell:
+  #
+  # Enable / Disable the shell module
+  enabled: false
+  #
+  # The directory where sentinels are stored to only run at firstboot
+  directory: /data/bootconf/shell
+  #
+  # Prepend a directory to PATH for every command (e.g. /usr/lib/framework/bin)
+  # Leave empty to inherit PATH from the environment unchanged.
+  path: ""
+  #
+  # The list of commands to execute
+  commands: []
+  #   # -- Name of the command to execute
+  # - name: get-process-list
+  #   # -- Allow failure: If failed, show OK in status and exitcode
+  #   allow_fail: true
+  #   # -- Only run at first boot
+  #   firstboot: true
+  #   # -- The command to run
+  #   command: |
+  #     bash -c 'ps -ef'
+
+#
+# Unit run: Create shell scripts and unit files to run scripts with systemd
+#
+unitrun:
+  #
+  # Enable / Disable
+  enabled: false
+  #
+  # Prepend a directory to PATH in every generated unit (e.g. /usr/lib/framework/bin)
+  # Leave empty to omit the Environment=PATH line entirely.
+  path: ""
+  #
+  # Where to save the scripts sentinel
+  directory: /data/bootconf/scripts
+  #
+  # List of unit declarations
+  units: []
+  #   # -- The name of the unit file
+  # - name: some-name
+  #   # -- Enable / Disable the unit file
+  #   # -- If set to enabled: false: Remove the unit file
+  #   enabled: true
+  #   # -- Only run at first boot
+  #   firstboot: false
+  #   # -- The dependencies of the unit file
+  #   dependencies:
+  #   - After=multi-user.target
+  #   - Before=shutdown.target
+  #   - Conflicts=shutdown.target
+  #   # -- The command to write to a script and run with the unitfile
+  #   command: |
+  #     a bunch of commands here
+  #     to run several things
+  #     in a script
+  #     exit 0

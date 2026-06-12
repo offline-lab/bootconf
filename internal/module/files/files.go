@@ -105,8 +105,10 @@ func (filesModule *FilesModule) copyEntry(entry config.FileEntry, dryRun bool) e
 		if copyErr != nil {
 			return fmt.Errorf("%s: copy: %w", entry.Destination, copyErr)
 		}
+
 	} else {
 		logging.Info(filesModule.Name(), "writing content → %s", destinationPath)
+
 		if err := os.WriteFile(destinationPath, []byte(entry.Content), 0600); err != nil {
 			return fmt.Errorf("%s: write content: %w", entry.Destination, err)
 		}

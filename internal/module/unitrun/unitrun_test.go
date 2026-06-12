@@ -146,10 +146,9 @@ func TestUnitRunFirstBootInjectsCondition(t *testing.T) {
 
 	module := New(config.UnitRunConfig{
 		Enabled:   true,
-		FirstBoot: true,
 		Directory: scriptDir,
 		Units: []config.UnitEntry{
-			{Name: "first-boot-task", Enabled: true, Command: "echo setup\n"},
+			{Name: "first-boot-task", Enabled: true, FirstBoot: true, Command: "echo setup\n"},
 		},
 	})
 	module.unitsDir = unitsDir

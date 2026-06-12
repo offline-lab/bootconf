@@ -20,7 +20,6 @@ import (
 // init system picks up the changes without a reboot.
 type UnitRunModule struct {
 	enabled   bool
-	firstBoot bool
 	directory string
 	unitsDir  string
 	path      string
@@ -31,7 +30,6 @@ type UnitRunModule struct {
 func New(cfg config.UnitRunConfig) *UnitRunModule {
 	return &UnitRunModule{
 		enabled:   cfg.Enabled,
-		firstBoot: cfg.FirstBoot,
 		directory: cfg.Directory,
 		unitsDir:  "/etc/systemd/system",
 		path:      cfg.Path,
@@ -92,7 +90,7 @@ func (unitRunModule *UnitRunModule) provisionUnit(ctx context.Context, unit conf
 	serviceFilePath := filepath.Join(unitRunModule.unitsDir, serviceName)
 
 	dependencies := unit.Dependencies
-	if unitRunModule.firstBoot {
+	if unit.FirstBoot {
 		dependencies = append(dependencies, "ConditionFirstBoot=yes")
 	}
 
@@ -100,7 +98,7 @@ func (unitRunModule *UnitRunModule) provisionUnit(ctx context.Context, unit conf
 		logging.Info(unitRunModule.Name(), "would create directory %s (dry-run)", unitRunModule.directory)
 		logging.Info(unitRunModule.Name(), "would write script %s (dry-run)", scriptPath)
 		logging.Info(unitRunModule.Name(), "would write unit file %s (dry-run)", serviceFilePath)
-		if unitRunModule.firstBoot {
+		if unit.FirstBoot {
 			logging.Info(unitRunModule.Name(), "would add ConditionFirstBoot=yes to %s (dry-run)", serviceName)
 		}
 		logging.Info(unitRunModule.Name(), "would systemctl enable %s (dry-run)", serviceName)

@@ -1,11 +1,8 @@
 #
-# Bootconf configuration
+# Bootconf configuration for testing and development
 #
-# Bootconf configuration: here we manipulate how the tool itself works.
 bootconf:
-  # Exit without executing if false : Only log
   enabled: true
-  # The directory where status files are kept
   directory: /data/bootconf
   order:
   - system
@@ -18,190 +15,95 @@ bootconf:
   - unitrun
   - shell
 
-
-#
-# Wifi configuration
-#
-# The wifi configuration is simple:
-# - Create directory <wifi.directory>
-# - if enabled: Create a sentinel file <services.directory>/wifi
-# - if disabled: Remove the sentinel file <services.directory>/wifi
-# - Write wpa_supplicant.conf using the pre-hashed PSK
-#
-# After this, the wifi configuration is in place, and the real daemon start is
-# handed over to systemd again that starts the wifi daemon with the config we
-# generated here.
-#
-wifi:
-  # Enable WIFI at boot time
-  enabled: true
-  # Where to save the wifi config
-  directory: /data/config/wifi
-  # Configure the SSID
-  ssid: something
-  # Configure the password hash
-  password_hash: 'a2b3c4d5e6f7a2b3c4d5e6f7a2b3c4d5e6f7a2b3c4d5e6f7a2b3c4d5e6f7a2b3'
-  # Configure the regulator country
-  country: NL
-
-#
-# System configuration
-#
-# The system configuration will extend over time: This will be mostly system
-# configs that we add over time.
-#
 system:
   enabled: true
-
-  # Set the timezone ( using timedatectl set-timezone )
   timezone: Europe/Amsterdam
-  # Set the hostname ( using hostnamectl set-hostname )
   hostname: offline-lab
 
-
-# Configure SSH specifics
-ssh:
-  # The directory with the writeable configuration for the ssh service
-  directory: /data/config/ssh
-
-  # Enable SSH at boot time
-  # - if enabled: Create a file {{ services.directory }}/ssh
-  # - if disabled: Check if file {{ services.directory }}/ssh exists and remove
+users:
   enabled: true
-  # The type of key to generate for hostkey
+  directory: /data/config/users
+  tmpfiles_dir: /data/config/tmpfiles
+  users:
+  - name: offlinelab
+    enabled: true
+    sudo: true
+    home: /data/home/offlinelab
+    authorized_keys:
+    - "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCY1/jmHp/cSIPfG388BbaP/kISOKnsvPiMgLYm/vUsOFIvXfxqPo5Xh5r8wfwUQrjw1iLb3DYp6FWKEzAGpJRs= flip@fliphess.com"
+
+wifi:
+  enabled: true
+  directory: /data/config/wifi
+  ssid: something
+  password_hash: 'dummydummydummydummydummydummydummy'
+  country: NL
+
+ssh:
+  enabled: true
+  directory: /data/config/ssh
   keytype: ed25519
-  # - Only if not exist yet
-  # - Generate SSH host keys for the ssh daemon
-  #   Using: dropbearkey -t {{ ssh.keytype }} -f {{ ssh.directory }}/ssh/hostkey
-  # - Generate public key ({{ ssh.directory }}/hostkey.pub) from host key
   generate_host_keys: true
-  # Daemon: which daemon we install: can be dropbear or openssh
   daemon: dropbear
 
-
-#
-# Services configuration
-#
-# Services configuration is a bit weird because it does not really follow normal
-# conventions.  Instead we have to work around our readonly filesystem.
-#
-# So for each service:
-# - if enabled: create {{ services.directory }}/<name>
-# - if disabled: remove {{ services.directory }}/<name>
-# - If copy_default_config == true: Copy /etc/<name>/<name>.conf to /data/config/<name>/<name>.conf
-#
 services:
   enabled: true
   directory: /data/config/services
   services:
-    - name: disco
-      # Enable Disco at boot time
-      enabled: true
-      # Copy a sentinel file in place in services.directory (can be disabled)
-      sentinel: true
-      # Copy the default config from source to destination
-      default_config:
-        copy: true
-        source: /etc/disco/disco.conf
-        destination: /data/config/disco/disco.conf
+  - name: disco
+    enabled: true
+    sentinel: true
+    default_config:
+      copy: true
+      source: /etc/disco/config.yaml
+      destination: /data/config/disco/config.yaml
 
-#
-# Users configuration (Done using systemd-sysusers)
-#
-# For each user:
-# - Generate a sysusers.d/<name>.conf (with "m <name> sudo" line if sudo: true)
-# - Create defined homedir
-# - Create homedir/.ssh with perms 700 and owned by <name>
-# - Create homedir/.ssh/authorized_keys perms 600 owned by <name>
-#   with the authorized keys as content, one on each line.
-users:
-  enabled: true
-
-  # Where to put the sysuser config
-  directory: /data/config/users
-  # Where to put the tmpfiles.d drop-ins (used to create home dirs from /etc/skel)
-  tmpfiles_dir: /data/config/tmpfiles
-  users:
-    - name: offlinelab
-      enabled: true
-      sudo: true
-      home: /data/home/offlinelab
-      authorized_keys:
-        - "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBCY1/jmHp/cSIPfG388BbaP/kISOKnsvPiMgLYm/vUsOFIvXfxqPo5Xh5r8wfwUQrjw1iLb3DYp6FWKEzAGpJRs= flip@fliphess.com"
-
-#
-# Configs that should be moved into place
-#
-#   - If source is a file, copy the file, if source is a directory, copy the full directory.
-#   - Never overwrite other files
-#   - Keep sane defaults: always owner root:root and permission 750 (dir) 640 (file)
-#
-# For each file:
-# - Make sure the dest directory exists (permissions 750)
-# - Make sure source file exists
-#   - IF source file exists:
-#     - Copy to dest
-#     - Set chmod permissions
-#     - Change the owner to 0:0
-#
-# We have 2 config mechanisms: through services for services and though files.
-# But we do not overwrite other files, so instead, if the file already exists,
-# just copy it with suffix .new so dest becomes /data/config/disco/disco.conf.new
 files:
   enabled: true
   files:
-    - source: /boot/firmware/config/disco.conf
-      destination: /data/config/disco/disco.conf
-      chmod: 640
+  - source: /etc/motd
+    destination: /data/config/motd
+    chmod: 640
 
-# render templates to files
 templates:
   enabled: true
   templates:
-    - source: /boot/firmware/config/disco.conf.tpl
-      destination: /data/config/disco/disco.conf
-      variables:
-        some: blabla
-        another: yes
-      chmod: 640
+  - source: /etc/template.tpl
+    chmod: 640
+    destination: /data/config/message
+    variables:
+      name: Offline Lab OS
+      hostname: offline-lab
 
 shell:
-  enabled: true
+  enabled: false
   directory: /data/bootconf/shell
-  # Prepend a directory to PATH for every command (e.g. /usr/lib/framework/bin)
-  # Leave empty to inherit PATH from the environment unchanged.
-  path: ""
-  commands:
-    - name: get-process-list
-      allow_fail: true
-      firstboot: true
-      command: |
-        bash -c 'ps -ef'
-    - name: get-df
-      allow_fail: false
-      firstboot: false
-      command: df /
+  path: "/usr/lib/framework/library:/usr/lib/framework/bin"
+  commands: []
+  # - name: get-process-list
+  #   allow_fail: true
+  #   firstboot: true
+  #   command: |
+  #     bash -c 'ps -ef'
+  # - name: get-df
+  #   allow_fail: false
+  #   firstboot: false
+  #   command: df /
 
 unitrun:
-  # enable / disable
-  enabled: true
-  # Only run at first boot
+  enabled: false
+  directory: /data/bootconf/unitrun
   firstboot: false
-  # Prepend a directory to PATH in every generated unit (e.g. /usr/lib/framework/bin)
-  # Leave empty to omit the Environment=PATH line entirely.
-  path: ""
-  # Where to save the scripts
-  directory: /data/bootconf/scripts
-  # unit declarations
-  units:
-  - name: some-name
-    enabled: true
-    dependencies:
-      - After=multi-user.target
-      - Before=shutdown.target
-      - Conflicts=shutdown.target
-    command: |
-      a bunch of commands here
-      to run several things
-      in a script
-      exit 0
+  path: "/usr/lib/framework/library:/usr/lib/framework/bin"
+  units: []
+  # - name: some-name
+  #   enabled: true
+  #   dependencies:
+  #     - After=multi-user.target
+  #     - Before=shutdown.target
+  #     - Conflicts=shutdown.target
+  #   command: |
+  #     a bunch of commands here
+  #     to run several things
+  #     in a script
+  #     exit 0

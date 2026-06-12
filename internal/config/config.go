@@ -148,9 +148,12 @@ type ShellConfig struct {
 }
 
 // UnitEntry describes a shell script to run via a generated systemd unit.
+// When FirstBoot is true, ConditionFirstBoot=yes is added to the generated
+// unit so systemd skips it after the first boot — no custom sentinel needed.
 type UnitEntry struct {
 	Name         string   `yaml:"name"`
 	Enabled      bool     `yaml:"enabled"`
+	FirstBoot    bool     `yaml:"firstboot"`
 	Dependencies []string `yaml:"dependencies"`
 	Command      string   `yaml:"command"`
 }
@@ -158,11 +161,8 @@ type UnitEntry struct {
 // UnitRunConfig defines scripts to run via generated systemd units.
 // Each enabled unit writes a script to Directory and a .service file to
 // /etc/systemd/system/, then calls systemctl enable + daemon-reload.
-// When FirstBoot is true, ConditionFirstBoot=yes is added to every generated
-// unit so systemd skips them after the first boot — no custom sentinel needed.
 type UnitRunConfig struct {
 	Enabled   bool        `yaml:"enabled"`
-	FirstBoot bool        `yaml:"firstboot"`
 	Directory string      `yaml:"directory"`
 	Path      string      `yaml:"path"`
 	Units     []UnitEntry `yaml:"units"`
