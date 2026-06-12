@@ -12,16 +12,8 @@ import (
 	"github.com/offline-lab/bootconf/internal/config"
 	"github.com/offline-lab/bootconf/internal/logging"
 	"github.com/offline-lab/bootconf/internal/module"
-	"github.com/offline-lab/bootconf/internal/module/files"
-	"github.com/offline-lab/bootconf/internal/module/services"
-	"github.com/offline-lab/bootconf/internal/module/shell"
-	"github.com/offline-lab/bootconf/internal/module/ssh"
-	"github.com/offline-lab/bootconf/internal/module/system"
-	"github.com/offline-lab/bootconf/internal/module/templates"
-	"github.com/offline-lab/bootconf/internal/module/unitrun"
-	"github.com/offline-lab/bootconf/internal/module/users"
-	"github.com/offline-lab/bootconf/internal/module/wifi"
 	"github.com/offline-lab/bootconf/internal/output"
+	"github.com/offline-lab/bootconf/internal/registry"
 	"github.com/offline-lab/bootconf/internal/status"
 )
 
@@ -54,7 +46,14 @@ func runBootconf(_ *cobra.Command, _ []string) {
 		logging.SetLevel(logging.DEBUG)
 	}
 
+	registry.ApplyDefaults(cfg)
+
 	if err := cfg.Validate(); err != nil {
+		fmt.Fprintf(os.Stderr, "validation error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := registry.Validate(cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "validation error: %v\n", err)
 		os.Exit(1)
 	}
@@ -66,17 +65,7 @@ func runBootconf(_ *cobra.Command, _ []string) {
 
 	_, _ = daemon.SdNotify(false, "STATUS=Applying boot configuration")
 
-	modules := []module.Module{
-		system.New(cfg.System, cfg.Bootconf.Directory),
-		ssh.New(cfg.SSH, cfg.Services.Directory),
-		wifi.New(cfg.Wifi, cfg.Services.Directory),
-		services.New(cfg.Services),
-		users.New(cfg.Users, 2000),
-		files.New(cfg.Files),
-		templates.New(cfg.Templates),
-		shell.New(cfg.Shell),
-		unitrun.New(cfg.UnitRun),
-	}
+	modules := registry.Build(cfg)
 
 	ctx := context.Background()
 	start := time.Now()

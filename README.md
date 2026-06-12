@@ -1,15 +1,11 @@
 # bootconf
 
 Bootconf is a declarative boot configuration tool for Linux. It reads a single
-YAML file and applies system settings during early boot — before any other
+YAML file and applies system settings during early boot, before any other
 service starts.
 
 It runs on **every boot**, so configuration changes take effect on the next
 reboot without reinstalling or reimaging the system.
-
-```
-hostname · timezone · SSH host keys · WiFi · users · service sentinels · files
-```
 
 No cloud dependency. No agent. No runtime daemon. Just a binary, a YAML file,
 and a systemd unit.
@@ -23,7 +19,7 @@ and a systemd unit.
 | `wifi` | Writes `wpa_supplicant.conf` from a pre-hashed WPA2 PSK |
 | `services` | Creates/removes sentinel files; optionally copies a default config on first boot |
 | `users` | Provisions user accounts via `systemd-sysusers`, sets up SSH authorized keys and sudo group membership |
-| `files` | Copies arbitrary files from source to destination (never overwrites existing content) |
+| `files` | Copies or writes arbitrary files into the target filesystem |
 | `templates` | Renders Go `text/template` files with config-supplied variables |
 | `shell` | Executes shell commands at boot, capturing stdout/stderr/exit code to log files |
 | `unitrun` | Writes shell scripts and systemd units, enables them via `systemctl` |
@@ -128,7 +124,7 @@ WantedBy=sysinit.target
 systemctl enable bootconf.service
 ```
 
-`Type=notify` lets systemd track exact completion — bootconf sends `READY=1`
+`Type=notify` lets systemd track exact completion. Bootconf sends `READY=1`
 via sd_notify after all modules finish.
 
 ## Configure
@@ -142,7 +138,7 @@ via sd_notify after all modules finish.
 | `ssh` | `daemon`, `keytype`, `generate_host_keys`, `directory` | `<ssh.directory>/hostkey`, `<services.directory>/ssh` |
 | `wifi` | `ssid`, `password_hash`, `country`, `directory` | `<wifi.directory>/wpa_supplicant.conf`, `<services.directory>/wifi` |
 | `services` | `directory`, `services[]` | `<services.directory>/<name>` |
-| `users` | `directory`, `users[]` | `<users.directory>/<user>.conf`, `<home>/.ssh/authorized_keys` |
+| `users` | `directory`, `tmpfiles_dir`, `users[]` | `<users.directory>/<user>.conf`, `<tmpfiles_dir>/<user>.conf`, `<home>/.ssh/authorized_keys` |
 | `files` | `files[]` | As configured per entry |
 | `templates` | `templates[]` | As configured per entry (`.new` suffix if destination exists) |
 | `shell` | `directory`, `commands[]` | `<directory>/<name>.log`, `<directory>/<name>.firstboot` |
@@ -158,8 +154,8 @@ wifi:
   enabled: false
 ```
 
-When a module is disabled, bootconf reverses its effects where possible —
-removing sentinel files, removing sysusers config. When the whole tool is
+When a module is disabled, bootconf reverses its effects where possible: it
+removes sentinel files and sysusers config entries. When the whole tool is
 disabled, it exits immediately without touching anything.
 
 ### Users and sudo
@@ -195,7 +191,7 @@ enabled, and removes it when disabled. Your init scripts or systemd units use
 
 The optional `default_config` block copies a default config file to a writable
 location. If the destination already exists, the new content is placed alongside
-it with a `.new` suffix — existing config is never overwritten.
+it with a `.new` suffix; existing config is never overwritten.
 
 ### Generating a WiFi PSK hash
 
@@ -252,7 +248,7 @@ bootconf status --section ssh
 
 ### check
 
-Verify runtime state against the config file — checks that configured services
+Verify runtime state against the config file; checks that configured services
 are active and users exist:
 
 ```bash
@@ -285,13 +281,14 @@ cmd/bootconf/
 internal/
   config/               YAML config loading, defaults, and validation
   logging/              Structured leveled logger (INFO/WARN/ERROR/DEBUG)
-  module/               Module interface, concurrent runner, per-module packages
+  module/               Module interface, sequential runner, per-module packages
     system/             Hostname and timezone
     ssh/                SSH host key generation (dropbear / openssh)
     wifi/               wpa_supplicant.conf generation
     services/           Service sentinel files and config copy
     users/              User accounts, SSH keys, home directories, sudo group
     files/              Arbitrary file copy
+  registry/             Single source of truth for module names and constructors
   run/                  exec.CommandContext wrapper used by all modules
   status/               Run status read/write (status.json)
 test/
@@ -309,10 +306,10 @@ type Module interface {
 }
 ```
 
-The `Runner` executes all registered modules **concurrently** and collects
-results in declaration order. If a section fails, the remaining sections
-continue running. Results are written to `<bootconf.directory>/status.json`
-after every run, which `bootconf status` reads back.
+The `Runner` executes modules **sequentially** in the order defined by
+`bootconf.order`. If a section fails, the remaining sections still run.
+Results are written to `<bootconf.directory>/status.json` after every run,
+which `bootconf status` reads back.
 
 Modules can be targeted individually with `--section`.
 

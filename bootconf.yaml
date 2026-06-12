@@ -7,6 +7,17 @@ bootconf:
   enabled: true
   # The directory where status files are kept
   directory: /data/bootconf
+  order:
+  - system
+  - users
+  - wifi
+  - ssh
+  - services
+  - files
+  - templates
+  - unitrun
+  - shell
+
 
 #
 # Wifi configuration
@@ -108,6 +119,8 @@ users:
 
   # Where to put the sysuser config
   directory: /data/config/users
+  # Where to put the tmpfiles.d drop-ins (used to create home dirs from /etc/skel)
+  tmpfiles_dir: /data/config/tmpfiles
   users:
     - name: offlinelab
       enabled: true

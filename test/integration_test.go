@@ -85,8 +85,9 @@ func newTestEnvironment(t *testing.T) *testEnvironment {
 			},
 		},
 		Users: config.UsersConfig{
-			Enabled:   true,
-			Directory: filepath.Join(baseDir, "users"),
+			Enabled:     true,
+			Directory:   filepath.Join(baseDir, "users"),
+			TmpfilesDir: filepath.Join(baseDir, "tmpfiles"),
 			Users: []config.UserEntry{
 				{
 					Name:           testUserName,
@@ -281,6 +282,10 @@ func TestRealRunCreatesAllArtifacts(t *testing.T) {
 	expectedSysusers := "u " + testUserName + " 2000 \"testadmin\" " + env.homeDir + " /bin/bash\n" + "m testadmin sudo\n"
 	sysusersPath := filepath.Join(env.baseDir, "users", testUserName+".conf")
 	assertFileContent(t, sysusersPath, expectedSysusers)
+
+	expectedTmpfiles := "C " + env.homeDir + " - - - - /etc/skel\n"
+	tmpfilesPath := filepath.Join(env.baseDir, "tmpfiles", testUserName+".conf")
+	assertFileContent(t, tmpfilesPath, expectedTmpfiles)
 
 	assertDirExists(t, env.homeDir)
 	assertDirExists(t, filepath.Join(env.homeDir, ".ssh"))

@@ -12,6 +12,7 @@ import (
 
 func TestUsersCreateHomeAndKeys(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "alice")
 
 	entries := []config.UserEntry{
@@ -25,9 +26,10 @@ func TestUsersCreateHomeAndKeys(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
@@ -47,13 +49,15 @@ func TestUsersCreateHomeAndKeys(t *testing.T) {
 		t.Errorf("sysusers content = %q, want %q", string(data), want)
 	}
 
-	// Verify home directory.
-	homeInfo, err := os.Stat(homedir)
+	// Verify tmpfiles conf.
+	tmpfilesPath := filepath.Join(tmpfilesDir, "alice.conf")
+	tmpfilesData, err := os.ReadFile(tmpfilesPath)
 	if err != nil {
-		t.Fatalf("home dir not found: %v", err)
+		t.Fatalf("tmpfiles config not found: %v", err)
 	}
-	if !homeInfo.IsDir() {
-		t.Error("home is not a directory")
+	wantTmpfiles := "C " + homedir + " - - - - /etc/skel\n"
+	if string(tmpfilesData) != wantTmpfiles {
+		t.Errorf("tmpfiles content = %q, want %q", string(tmpfilesData), wantTmpfiles)
 	}
 
 	// Verify .ssh directory.
@@ -80,13 +84,18 @@ func TestUsersCreateHomeAndKeys(t *testing.T) {
 
 func TestUsersDisabledRemovesConfig(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	if err := os.MkdirAll(usersDir, 0755); err != nil {
 		t.Fatal(err)
 	}
 
-	// Pre-create the sysusers conf so we can verify removal.
+	// Pre-create the sysusers and tmpfiles confs so we can verify removal.
 	sysusersFile := filepath.Join(usersDir, "bob.conf")
 	if err := os.WriteFile(sysusersFile, []byte("old"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	tmpfilesFile := filepath.Join(tmpfilesDir, "bob.conf")
+	if err := os.WriteFile(tmpfilesFile, []byte("old"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -95,9 +104,10 @@ func TestUsersDisabledRemovesConfig(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
@@ -109,10 +119,14 @@ func TestUsersDisabledRemovesConfig(t *testing.T) {
 	if _, err := os.Stat(sysusersFile); !os.IsNotExist(err) {
 		t.Error("sysusers config should be removed")
 	}
+	if _, err := os.Stat(tmpfilesFile); !os.IsNotExist(err) {
+		t.Error("tmpfiles config should be removed")
+	}
 }
 
 func TestUsersDryRunNoWrites(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "carol")
 
 	entries := []config.UserEntry{
@@ -126,9 +140,10 @@ func TestUsersDryRunNoWrites(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), true)
@@ -140,6 +155,9 @@ func TestUsersDryRunNoWrites(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(usersDir, "carol.conf")); !os.IsNotExist(err) {
 		t.Error("sysusers config should not exist in dry-run")
 	}
+	if _, err := os.Stat(filepath.Join(tmpfilesDir, "carol.conf")); !os.IsNotExist(err) {
+		t.Error("tmpfiles config should not exist in dry-run")
+	}
 	if _, err := os.Stat(homedir); !os.IsNotExist(err) {
 		t.Error("home dir should not exist in dry-run")
 	}
@@ -147,6 +165,7 @@ func TestUsersDryRunNoWrites(t *testing.T) {
 
 func TestUsersMultipleUsers(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homeAlice := filepath.Join(t.TempDir(), "home", "alice")
 	homeBob := filepath.Join(t.TempDir(), "home", "bob")
 
@@ -156,9 +175,10 @@ func TestUsersMultipleUsers(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 2000)
 	result := users.Run(context.Background(), false)
@@ -185,10 +205,28 @@ func TestUsersMultipleUsers(t *testing.T) {
 	if string(bobData) != wantBob {
 		t.Errorf("bob sysusers = %q, want %q", string(bobData), wantBob)
 	}
+
+	// Verify tmpfiles confs for both users.
+	aliceTmpfiles, err := os.ReadFile(filepath.Join(tmpfilesDir, "alice.conf"))
+	if err != nil {
+		t.Fatalf("alice tmpfiles config not found: %v", err)
+	}
+	if string(aliceTmpfiles) != "C "+homeAlice+" - - - - /etc/skel\n" {
+		t.Errorf("alice tmpfiles = %q", string(aliceTmpfiles))
+	}
+
+	bobTmpfiles, err := os.ReadFile(filepath.Join(tmpfilesDir, "bob.conf"))
+	if err != nil {
+		t.Fatalf("bob tmpfiles config not found: %v", err)
+	}
+	if string(bobTmpfiles) != "C "+homeBob+" - - - - /etc/skel\n" {
+		t.Errorf("bob tmpfiles = %q", string(bobTmpfiles))
+	}
 }
 
 func TestUsersNoKeys(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "eve")
 
 	entries := []config.UserEntry{
@@ -196,9 +234,10 @@ func TestUsersNoKeys(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
@@ -207,13 +246,13 @@ func TestUsersNoKeys(t *testing.T) {
 		t.Fatalf("expected success, got error: %s", result.Error)
 	}
 
-	// Home and .ssh should exist, but authorized_keys must not.
-	homeInfo, err := os.Stat(homedir)
+	// .ssh should exist, but authorized_keys must not.
+	sshInfo, err := os.Stat(filepath.Join(homedir, ".ssh"))
 	if err != nil {
-		t.Fatalf("home dir not found: %v", err)
+		t.Fatalf(".ssh dir not found: %v", err)
 	}
-	if !homeInfo.IsDir() {
-		t.Error("home is not a directory")
+	if !sshInfo.IsDir() {
+		t.Error(".ssh is not a directory")
 	}
 
 	keysPath := filepath.Join(homedir, ".ssh", "authorized_keys")
@@ -224,6 +263,7 @@ func TestUsersNoKeys(t *testing.T) {
 
 func TestUsersSingleKey(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "dave")
 
 	singleKey := "ssh-ed25519 AAAA dave@host"
@@ -237,9 +277,10 @@ func TestUsersSingleKey(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
@@ -262,6 +303,7 @@ func TestUsersSingleKey(t *testing.T) {
 
 func TestUsersMultipleKeys(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "frank")
 
 	keys := []string{
@@ -279,9 +321,10 @@ func TestUsersMultipleKeys(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
@@ -304,6 +347,7 @@ func TestUsersMultipleKeys(t *testing.T) {
 
 func TestUsersDisabledSkipsCreation(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "mallory")
 
 	entries := []config.UserEntry{
@@ -315,9 +359,10 @@ func TestUsersDisabledSkipsCreation(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
@@ -326,12 +371,12 @@ func TestUsersDisabledSkipsCreation(t *testing.T) {
 		t.Fatalf("expected success, got error: %s", result.Error)
 	}
 
-	// No sysusers conf should be created.
 	if _, err := os.Stat(filepath.Join(usersDir, "mallory.conf")); !os.IsNotExist(err) {
 		t.Error("sysusers config should not exist for disabled user")
 	}
-
-	// No home directory should be created.
+	if _, err := os.Stat(filepath.Join(tmpfilesDir, "mallory.conf")); !os.IsNotExist(err) {
+		t.Error("tmpfiles config should not exist for disabled user")
+	}
 	if _, err := os.Stat(homedir); !os.IsNotExist(err) {
 		t.Error("home dir should not exist for disabled user")
 	}
@@ -339,6 +384,7 @@ func TestUsersDisabledSkipsCreation(t *testing.T) {
 
 func TestUsersModuleDisabled(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "alice")
 
 	entries := []config.UserEntry{
@@ -351,9 +397,10 @@ func TestUsersModuleDisabled(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   false,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     false,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
@@ -365,7 +412,6 @@ func TestUsersModuleDisabled(t *testing.T) {
 		t.Errorf("message = %q, want %q", result.Message, "users disabled")
 	}
 
-	// No files should be created.
 	if _, err := os.Stat(filepath.Join(usersDir, "alice.conf")); !os.IsNotExist(err) {
 		t.Error("no files should be created when module is disabled")
 	}
@@ -373,6 +419,7 @@ func TestUsersModuleDisabled(t *testing.T) {
 
 func TestUsersSshDirPerms(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "grace")
 
 	entries := []config.UserEntry{
@@ -385,9 +432,10 @@ func TestUsersSshDirPerms(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
@@ -409,6 +457,7 @@ func TestUsersSshDirPerms(t *testing.T) {
 
 func TestUsersAuthorizedKeysPerms(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "heidi")
 
 	entries := []config.UserEntry{
@@ -421,9 +470,10 @@ func TestUsersAuthorizedKeysPerms(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
@@ -445,6 +495,7 @@ func TestUsersAuthorizedKeysPerms(t *testing.T) {
 
 func TestUsersSudoTrueAddsGroupLine(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "admin")
 
 	entries := []config.UserEntry{
@@ -452,9 +503,10 @@ func TestUsersSudoTrueAddsGroupLine(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)
@@ -476,6 +528,7 @@ func TestUsersSudoTrueAddsGroupLine(t *testing.T) {
 
 func TestUsersSudoFalseNoGroupLine(t *testing.T) {
 	usersDir := t.TempDir()
+	tmpfilesDir := t.TempDir()
 	homedir := filepath.Join(t.TempDir(), "home", "operator")
 
 	entries := []config.UserEntry{
@@ -483,9 +536,10 @@ func TestUsersSudoFalseNoGroupLine(t *testing.T) {
 	}
 
 	cfg := config.UsersConfig{
-		Enabled:   true,
-		Directory: usersDir,
-		Users:     entries,
+		Enabled:     true,
+		Directory:   usersDir,
+		TmpfilesDir: tmpfilesDir,
+		Users:       entries,
 	}
 	users := New(cfg, 1000)
 	result := users.Run(context.Background(), false)

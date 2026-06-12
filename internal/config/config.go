@@ -28,8 +28,9 @@ type Config struct {
 // BootconfConfig controls the overall bootconf tool: where it stores status
 // and whether it runs at all.
 type BootconfConfig struct {
-	Enabled   bool   `yaml:"enabled"`
-	Directory string `yaml:"directory"`
+	Enabled   bool     `yaml:"enabled"`
+	Directory string   `yaml:"directory"`
+	Order     []string `yaml:"order"`
 }
 
 // SystemConfig configures hostname and timezone on the target device.
@@ -83,9 +84,10 @@ type DefaultConfig struct {
 
 // UsersConfig defines user accounts to create on the target device.
 type UsersConfig struct {
-	Enabled   bool        `yaml:"enabled"`
-	Directory string      `yaml:"directory"`
-	Users     []UserEntry `yaml:"users"`
+	Enabled     bool        `yaml:"enabled"`
+	Directory   string      `yaml:"directory"`
+	TmpfilesDir string      `yaml:"tmpfiles_dir"`
+	Users       []UserEntry `yaml:"users"`
 }
 
 // UserEntry describes a single user account: name, home directory, sudo
@@ -185,6 +187,7 @@ func Load(path string) (*Config, error) {
 
 // SetDefaults fills in zero-valued fields with sensible defaults
 // (e.g. ed25519 key type, dropbear daemon, 640 file permissions, /home/<name> for users).
+// Bootconf.Order is NOT defaulted here; call registry.ApplyDefaults after Load.
 func (cfg *Config) SetDefaults() {
 	if cfg.Bootconf.Directory == "" {
 		cfg.Bootconf.Directory = "/data/bootconf"
@@ -194,6 +197,9 @@ func (cfg *Config) SetDefaults() {
 	}
 	if cfg.SSH.Daemon == "" {
 		cfg.SSH.Daemon = "dropbear"
+	}
+	if cfg.Users.TmpfilesDir == "" {
+		cfg.Users.TmpfilesDir = "/data/config/tmpfiles"
 	}
 	for index := range cfg.Users.Users {
 		if cfg.Users.Users[index].Home == "" && cfg.Users.Users[index].Name != "" {

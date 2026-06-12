@@ -67,6 +67,7 @@ func (cfg *Config) Validate() error {
 
 // validateBootconf ensures the boot configuration directory is present and
 // points to a real location on disk when the section is active.
+// Order validation (unknown/duplicate names) is handled by registry.Validate.
 func (cfg *Config) validateBootconf() error {
 	if !cfg.Bootconf.Enabled {
 		return nil
@@ -299,6 +300,14 @@ func (cfg *Config) validateUsers() error {
 	}
 
 	if err := validateSafePath(cfg.Users.Directory, "users.directory"); err != nil {
+		return err
+	}
+
+	if cfg.Users.TmpfilesDir == "" {
+		return fmt.Errorf("users.tmpfiles_dir is required when users is enabled")
+	}
+
+	if err := validateSafePath(cfg.Users.TmpfilesDir, "users.tmpfiles_dir"); err != nil {
 		return err
 	}
 

@@ -1,8 +1,9 @@
 // Package users creates system user accounts via systemd-sysusers convention.
-// For each enabled user, a .conf file is written containing the sysusers
-// directive. Home directories and .ssh/authorized_keys are provisioned
-// directly. Disabled users have their config removed and their account
-// deleted via userdel.
+// For each enabled user, a sysusers .conf file and a tmpfiles.d .conf file are
+// written. The tmpfiles.d file uses a C directive to copy /etc/skel into the
+// home directory (creating it with skeleton content). The .ssh/authorized_keys
+// are provisioned directly. Disabled users have their configs removed and their
+// account deleted via userdel.
 package users
 
 import (
@@ -21,19 +22,21 @@ import (
 // UsersModule provisions user accounts from config entries. UIDs are assigned
 // sequentially starting from uidStart to avoid collisions with system accounts.
 type UsersModule struct {
-	enabled  bool
-	entries  []config.UserEntry
-	uidStart int
-	usersDir string
+	enabled     bool
+	entries     []config.UserEntry
+	uidStart    int
+	usersDir    string
+	tmpfilesDir string
 }
 
 // New creates a UsersModule from the given users config and UID start value.
 func New(cfg config.UsersConfig, uidStart int) *UsersModule {
 	return &UsersModule{
-		enabled:  cfg.Enabled,
-		entries:  cfg.Users,
-		uidStart: uidStart,
-		usersDir: cfg.Directory,
+		enabled:     cfg.Enabled,
+		entries:     cfg.Users,
+		uidStart:    uidStart,
+		usersDir:    cfg.Directory,
+		tmpfilesDir: cfg.TmpfilesDir,
 	}
 }
 
@@ -75,6 +78,11 @@ func (usersModule *UsersModule) teardownUser(ctx context.Context, name string) {
 		logging.Warn(usersModule.Name(), "failed to remove sysusers config %s: %v", sysusersConf, err)
 	}
 
+	tmpfilesConf := filepath.Join(usersModule.tmpfilesDir, name+".conf")
+	if err := os.Remove(tmpfilesConf); err != nil && !os.IsNotExist(err) {
+		logging.Warn(usersModule.Name(), "failed to remove tmpfiles config %s: %v", tmpfilesConf, err)
+	}
+
 	if !config.IsValidUsername(name) {
 		logging.Warn(usersModule.Name(), "skipping userdel for unsafe username %q", name)
 		return
@@ -95,13 +103,18 @@ func (usersModule *UsersModule) provisionUser(ctx context.Context, entry config.
 		sysusersLine += fmt.Sprintf("m %s sudo\n", entry.Name)
 	}
 
+	tmpfilesConf := filepath.Join(usersModule.tmpfilesDir, entry.Name+".conf")
+	tmpfilesLine := fmt.Sprintf("C %s - - - - /etc/skel\n", entry.Home)
+
 	sshDir := filepath.Join(entry.Home, ".ssh")
 	keysPath := filepath.Join(sshDir, "authorized_keys")
 
 	if dryRun {
 		logging.Info(usersModule.Name(), "would create users dir %s (dry-run)", usersModule.usersDir)
 		logging.Info(usersModule.Name(), "would write sysusers config %s (dry-run)", sysusersConf)
-		logging.Info(usersModule.Name(), "would create home %s and .ssh dir (dry-run)", entry.Home)
+		logging.Info(usersModule.Name(), "would write tmpfiles config %s (dry-run)", tmpfilesConf)
+		logging.Info(usersModule.Name(), "would run systemd-tmpfiles --create %s (dry-run)", tmpfilesConf)
+		logging.Info(usersModule.Name(), "would create .ssh dir %s (dry-run)", sshDir)
 		if len(entry.AuthorizedKeys) > 0 {
 			logging.Info(usersModule.Name(), "would write %d authorized key(s) to %s (dry-run)", len(entry.AuthorizedKeys), keysPath)
 		}
@@ -118,9 +131,18 @@ func (usersModule *UsersModule) provisionUser(ctx context.Context, entry config.
 		return fmt.Errorf("write sysusers config %s: %w", sysusersConf, err)
 	}
 
-	if err := os.MkdirAll(entry.Home, 0750); err != nil {
-		return fmt.Errorf("create home %s: %w", entry.Home, err)
+	if err := os.MkdirAll(usersModule.tmpfilesDir, 0750); err != nil {
+		return fmt.Errorf("create tmpfiles dir %s: %w", usersModule.tmpfilesDir, err)
 	}
+
+	if err := os.WriteFile(tmpfilesConf, []byte(tmpfilesLine), 0640); err != nil {
+		return fmt.Errorf("write tmpfiles config %s: %w", tmpfilesConf, err)
+	}
+
+	if err := run.Command(ctx, "systemd-tmpfiles", "--create", tmpfilesConf); err != nil {
+		logging.Warn(usersModule.Name(), "systemd-tmpfiles --create %s failed: %v", tmpfilesConf, err)
+	}
+
 	if err := os.Chown(entry.Home, uid, uid); err != nil {
 		logging.Warn(usersModule.Name(), "failed to chown %s to uid %d: %v", entry.Home, uid, err)
 	}

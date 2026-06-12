@@ -1,4 +1,4 @@
-# AGENTS.md — Bootconf Developer Guide
+# AGENTS.md: Bootconf Developer Guide
 
 ## Quick Reference
 
@@ -30,7 +30,7 @@ internal/
   logging/              — Leveled structured logger (DEBUG/INFO/WARN/ERROR)
   module/               — Module interface, Runner, per-module packages
     module.go           — Module interface and Result type
-    runner.go           — Concurrent runner
+    runner.go           — Sequential runner (order set by bootconf.order)
     files/              — Copy files from source to destination
     services/           — Manage service sentinel files and default configs
     ssh/                — Generate SSH host keys, manage ssh sentinel
@@ -38,6 +38,7 @@ internal/
     users/              — Provision users via systemd-sysusers
     wifi/               — Write wpa_supplicant.conf and wifi sentinel
   output/               — Table rendering for CLI output
+  registry/             — Single source of truth for module names and constructors
   run/                  — Thin exec.CommandContext wrapper (internal/run.Command)
   status/               — Read/write status.json in bootconf.directory
 ```
@@ -47,7 +48,7 @@ internal/
 ## Adding a New Module
 
 This section is the authoritative guide for implementing a new bootconf module.
-Read the existing modules alongside this guide — they are the reference implementation.
+Read the existing modules alongside this guide; they are the reference implementation.
 
 ### 1. Create the package
 
@@ -68,7 +69,7 @@ type NtpConfig struct {
 ```
 
 Add it to the root `Config` struct and to `SetDefaults()` if defaults are needed.
-Add validation in `internal/config/validation.go` — the `Validate()` method calls per-section validators.
+Add validation in `internal/config/validation.go`; the `Validate()` method calls per-section validators.
 
 ### 3. Implement the module
 
@@ -133,10 +134,10 @@ func (ntpModule *NtpModule) Run(ctx context.Context, dryRun bool) module.Result 
 
 #### Constructor rules
 
-- Always named `New`. Never `NewNtpModule` — the package name provides the context.
+- Always named `New`. Never `NewNtpModule`; the package name provides the context.
 - First argument is always the config type for this module.
 - Extra arguments (e.g., a shared services directory) follow the config arg.
-- Pull all needed fields from config into the struct in `New` — `Run` must not read config directly.
+- Pull all needed fields from config into the struct in `New`; `Run` must not read config directly.
 
 #### Receiver naming
 
@@ -187,7 +188,7 @@ Always log the specific path, name, or value in the message. "failed to write co
 - For modules processing a list (files, services, users), collect all errors and report the count,
   similar to how `files` and `services` do it.
 - Non-fatal side effects (chown failures, cleanup errors) use `logging.Warn` and continue.
-- Never discard errors silently — no `_ = expr` except `defer f.Close()`.
+- Never discard errors silently. Use `_ = expr` only for `defer f.Close()`.
 
 ### 7. External commands
 
@@ -203,23 +204,27 @@ if err := run.Command(ctx, "hostnamectl", "set-hostname", ntpModule.hostname); e
 }
 ```
 
-### 8. Register the module in `cmd/bootconf/commands/run.go`
+### 8. Register the module in `internal/registry/registry.go`
+
+This is the only file that needs editing to wire in a new module. Add one `Entry` to `Modules`:
 
 ```go
-import "github.com/offline-lab/bootconf/internal/module/ntp"
-
-// In the module list:
-ntp.New(cfg.Ntp),
+{"ntp", func(cfg *config.Config) module.Module { return ntp.New(cfg.Ntp) }},
 ```
 
-The runner takes `[]module.Module`. Order determines the declaration order in the output table,
-but modules run concurrently so there are no ordering guarantees between them. If a module
-depends on another completing first, that dependency must be handled inside the module.
+Also add the import at the top of that file:
+
+```go
+"github.com/offline-lab/bootconf/internal/module/ntp"
+```
+
+The position in the slice sets the default execution order. Modules run **sequentially** in the
+order specified by `bootconf.order` (defaulting to the slice order in `registry.Modules`).
 
 ### 9. Write tests
 
 Tests live alongside the module: `internal/module/ntp/ntp_test.go`.
-Use `t.TempDir()` for all filesystem work — never write to fixed paths.
+Use `t.TempDir()` for all filesystem work. Never write to fixed paths.
 
 Minimum test coverage:
 - Disabled module returns success with "ntp disabled" message.
@@ -245,17 +250,17 @@ func TestNtpDisabled(t *testing.T) {
 
 ### Naming
 
-- No one- or two-letter variable names, anywhere — including receivers and loop variables.
+- No one- or two-letter variable names anywhere, including receivers and loop variables.
 - No abbreviations: `sourceFile` not `src`, `destinationPath` not `dst`, `character` not `char`.
 - Receiver names match the type: `(ntpModule *NtpModule)`, not `(m *NtpModule)`.
 - Unexported functions: camelCase. Exported: PascalCase. Never mixed-case packages.
-- Booleans: prefix `is`, `has`, `can` — e.g., `isEnabled`, `hasKeys`.
+- Booleans: prefix `is`, `has`, `can` (e.g. `isEnabled`, `hasKeys`).
 
 ### Comments
 
 Write no comments by default. Add one only when the **why** is non-obvious: a hidden constraint,
 a subtle invariant, a workaround for a known external bug. A comment that says what the code
-does is noise — the identifiers already say that.
+does is noise; the identifiers already say that.
 
 ```go
 // WRONG — states the obvious
@@ -294,8 +299,8 @@ return fmt.Errorf("Failed to write sysusers config. %w", err)
 
 Bootconf sends `sd_notify` signals when run as a systemd service:
 
-- `STATUS=Applying boot configuration` — emitted before modules run
-- `READY=1` — emitted after all modules complete successfully
+- `STATUS=Applying boot configuration`: emitted before modules run
+- `READY=1`: emitted after all modules complete successfully
 
 Use `Type=notify` in the unit file. The notify call is a no-op outside systemd,
 so there is no conditional wrapping needed.
@@ -316,5 +321,5 @@ so there is no conditional wrapping needed.
 
 - Go 1.24.0, target arm64 Linux, dev on arm64 macOS.
 - Version info is injected at build time via LDFLAGS into `cmd/bootconf/commands`.
-- Status file is written to `<bootconf.directory>/status.json` — no subdirectory.
-- `make test` runs `go test -v -race ./...` — all tests must pass with the race detector.
+- Status file is written to `<bootconf.directory>/status.json` with no subdirectory.
+- `make test` runs `go test -v -race ./...`; all tests must pass with the race detector.

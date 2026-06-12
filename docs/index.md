@@ -1,6 +1,6 @@
 # bootconf
 
-Bootconf is a declarative boot configuration tool for Linux. It reads a single YAML file and applies system settings during early boot — before any other service starts.
+Bootconf is a declarative boot configuration tool for Linux. It reads a single YAML file and applies system settings during early boot, before any other service starts.
 
 It runs on **every boot**, so configuration changes take effect on the next reboot without reinstalling or reimaging the system.
 
