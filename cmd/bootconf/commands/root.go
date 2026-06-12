@@ -37,7 +37,7 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "/boot/firmware/bootconf.yaml", "Path to configuration file")
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "/data/config/bootconf.yaml", "Path to configuration file")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(runCmd)
