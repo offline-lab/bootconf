@@ -22,7 +22,7 @@ func TestWifiEnabledCreatesConfig(t *testing.T) {
 		Directory:    wifiDir,
 	}
 	wifi := New(cfg, servicesDir)
-	result := wifi.Run(context.Background(), false)
+	result := wifi.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -72,7 +72,7 @@ func TestWifiEnabledDryRun(t *testing.T) {
 		Directory:    wifiDir,
 	}
 	wifi := New(cfg, servicesDir)
-	result := wifi.Run(context.Background(), true)
+	result := wifi.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -101,7 +101,7 @@ func TestWifiDisabledRemovesSentinel(t *testing.T) {
 		Directory: t.TempDir(),
 	}
 	wifi := New(cfg, servicesDir)
-	result := wifi.Run(context.Background(), false)
+	result := wifi.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -118,7 +118,7 @@ func TestWifiDisabledDryRun(t *testing.T) {
 		Directory: t.TempDir(),
 	}
 	wifi := New(cfg, t.TempDir())
-	result := wifi.Run(context.Background(), true)
+	result := wifi.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -137,7 +137,7 @@ func TestWifiDisabledNoSentinelToRemove(t *testing.T) {
 		Directory: t.TempDir(),
 	}
 	wifi := New(cfg, servicesDir)
-	result := wifi.Run(context.Background(), false)
+	result := wifi.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success when no sentinel exists, got error: %s", result.Error)
@@ -160,7 +160,7 @@ func TestWifiConfigContent(t *testing.T) {
 		Directory:    wifiDir,
 	}
 	wifi := New(cfg, servicesDir)
-	result := wifi.Run(context.Background(), false)
+	result := wifi.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -199,7 +199,7 @@ func TestWifiEnabledCreatesDirs(t *testing.T) {
 		Directory:    wifiDir,
 	}
 	wifi := New(cfg, servicesDir)
-	result := wifi.Run(context.Background(), false)
+	result := wifi.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -242,7 +242,7 @@ func TestWifiDisabledRemovesConfigSentinelOnly(t *testing.T) {
 		Directory: wifiDir,
 	}
 	wifi := New(cfg, servicesDir)
-	result := wifi.Run(context.Background(), false)
+	result := wifi.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)

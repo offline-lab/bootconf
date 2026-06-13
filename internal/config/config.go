@@ -68,11 +68,24 @@ type ServicesConfig struct {
 
 // ServiceEntry describes a single service: its name, whether it should run,
 // and an optional default config to copy into place.
+//
+// Unit is the systemd unit name used for health checks and systemctl start.
+// When empty, Name is used. Sentinel files always use Name as the filename.
 type ServiceEntry struct {
 	Name          string        `yaml:"name"`
+	Unit          string        `yaml:"unit"`
 	Enabled       bool          `yaml:"enabled"`
 	Sentinel      bool          `yaml:"sentinel"`
 	DefaultConfig DefaultConfig `yaml:"default_config"`
+}
+
+// SystemdUnit returns the systemd unit name for this service.
+// Falls back to Name when Unit is not set.
+func (entry ServiceEntry) SystemdUnit() string {
+	if entry.Unit != "" {
+		return entry.Unit
+	}
+	return entry.Name
 }
 
 // DefaultConfig specifies a source-to-destination file copy for a service.
@@ -171,11 +184,13 @@ type UnitRunConfig struct {
 // Load reads and parses a bootconf YAML file, then applies defaults.
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	cfg := &Config{}
+
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}
@@ -189,28 +204,35 @@ func Load(path string) (*Config, error) {
 // (e.g. ed25519 key type, dropbear daemon, 640 file permissions, /home/<name> for users).
 // Bootconf.Order is NOT defaulted here; call registry.ApplyDefaults after Load.
 func (cfg *Config) SetDefaults() {
+
 	if cfg.Bootconf.Directory == "" {
-		cfg.Bootconf.Directory = "/data/bootconf"
+		cfg.Bootconf.Directory = "/data/config/bootconf"
 	}
+
 	if cfg.SSH.Keytype == "" {
 		cfg.SSH.Keytype = "ed25519"
 	}
+
 	if cfg.SSH.Daemon == "" {
 		cfg.SSH.Daemon = "dropbear"
 	}
+
 	if cfg.Users.TmpfilesDir == "" {
 		cfg.Users.TmpfilesDir = "/data/config/tmpfiles"
 	}
+
 	for index := range cfg.Users.Users {
 		if cfg.Users.Users[index].Home == "" && cfg.Users.Users[index].Name != "" {
 			cfg.Users.Users[index].Home = "/home/" + cfg.Users.Users[index].Name
 		}
 	}
+
 	for index := range cfg.Files.Files {
 		if cfg.Files.Files[index].Chmod == "" {
 			cfg.Files.Files[index].Chmod = "640"
 		}
 	}
+
 	for index := range cfg.Templates.Templates {
 		if cfg.Templates.Templates[index].Chmod == "" {
 			cfg.Templates.Templates[index].Chmod = "640"

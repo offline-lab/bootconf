@@ -39,18 +39,22 @@ func (t *Table) Render() {
 	t.border("┌", "┬", "┐", widths)
 	t.data(t.headers, widths)
 	t.border("├", "┼", "┤", widths)
+
 	for _, r := range t.rows {
 		t.data(r, widths)
 	}
+
 	t.border("└", "┴", "┘", widths)
 }
 
 func (t *Table) colWidths() []int {
 	n := len(t.headers)
 	w := make([]int, n)
+
 	for i, h := range t.headers {
 		w[i] = utf8.RuneCountInString(h)
 	}
+
 	for _, row := range t.rows {
 		for i, cell := range row {
 			if i < n {
@@ -61,36 +65,47 @@ func (t *Table) colWidths() []int {
 			}
 		}
 	}
+
 	return w
 }
 
 func (t *Table) border(left, mid, right string, widths []int) {
 	var b strings.Builder
+
 	b.WriteString(left)
+
 	for i, w := range widths {
 		if i > 0 {
 			b.WriteString(mid)
 		}
 		b.WriteString(strings.Repeat("─", w+2))
 	}
+
 	b.WriteString(right)
+
 	_, _ = fmt.Fprintln(t.out, b.String())
 }
 
 func (t *Table) data(cells []string, widths []int) {
 	var b strings.Builder
+
 	b.WriteString("│")
+
 	for i, w := range widths {
 		cell := ""
+
 		if i < len(cells) {
 			cell = cells[i]
 		}
+
 		pad := w - utf8.RuneCountInString(cell)
 		b.WriteString(" ")
 		b.WriteString(cell)
+
 		if pad > 0 {
 			b.WriteString(strings.Repeat(" ", pad))
 		}
+
 		b.WriteString(" │")
 	}
 	_, _ = fmt.Fprintln(t.out, b.String())

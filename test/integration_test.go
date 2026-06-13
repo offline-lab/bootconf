@@ -144,7 +144,7 @@ func runModules(t *testing.T, modules []module.Module, dryRun bool) []module.Res
 	t.Helper()
 
 	runner := module.NewRunner(modules)
-	results := runner.Run(context.Background(), dryRun, "")
+	results := runner.Run(context.Background(), dryRun, false, "")
 
 	for _, result := range results {
 		if !result.Success {

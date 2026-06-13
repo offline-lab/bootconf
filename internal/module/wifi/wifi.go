@@ -12,6 +12,7 @@ import (
 	"github.com/offline-lab/bootconf/internal/config"
 	"github.com/offline-lab/bootconf/internal/logging"
 	"github.com/offline-lab/bootconf/internal/module"
+	"github.com/offline-lab/bootconf/internal/run"
 )
 
 // WifiModule configures wireless networking by writing a wpa_supplicant.conf
@@ -41,11 +42,13 @@ func New(cfg config.WifiConfig, servicesDir string) *WifiModule {
 func (wifiModule *WifiModule) Name() string { return "wifi" }
 
 // Run enables or disables wifi based on configuration.
-func (wifiModule *WifiModule) Run(_ context.Context, dryRun bool) module.Result {
+func (wifiModule *WifiModule) Run(ctx context.Context, dryRun bool, apply bool) module.Result {
+
 	if !wifiModule.enabled {
 		return wifiModule.disable(dryRun)
 	}
-	return wifiModule.enable(dryRun)
+
+	return wifiModule.enable(ctx, dryRun, apply)
 }
 
 func (wifiModule *WifiModule) disable(dryRun bool) module.Result {
@@ -55,22 +58,24 @@ func (wifiModule *WifiModule) disable(dryRun bool) module.Result {
 
 	if dryRun {
 		logging.Info(wifiModule.Name(), "would remove %s (dry-run)", sentinelPath)
-	} else if err := os.Remove(sentinelPath); err != nil && !os.IsNotExist(err) {
+
+		return module.Result{Section: wifiModule.Name(), Success: true, Message: "wifi disabled (dry-run)"}
+	}
+
+	if err := os.Remove(sentinelPath); err != nil && !os.IsNotExist(err) {
 		errMsg := fmt.Sprintf("failed to remove wifi sentinel %s: %v", sentinelPath, err)
 		logging.Error(wifiModule.Name(), "%s", errMsg)
+
 		return module.Result{Section: wifiModule.Name(), Success: false, Error: errMsg}
 	}
 
-	if dryRun {
-		return module.Result{Section: wifiModule.Name(), Success: true, Message: "wifi disabled (dry-run)"}
-	}
 	return module.Result{Section: wifiModule.Name(), Success: true, Message: "wifi disabled"}
 }
 
 // enable writes the wpa_supplicant.conf and creates the wifi sentinel file.
 // Existing wpa_supplicant.conf is overwritten since this is always authoritative —
 // unlike service default configs, wifi credentials are managed exclusively here.
-func (wifiModule *WifiModule) enable(dryRun bool) module.Result {
+func (wifiModule *WifiModule) enable(ctx context.Context, dryRun bool, apply bool) module.Result {
 	configFilePath := filepath.Join(wifiModule.wifiDir, "wpa_supplicant.conf")
 	sentinelPath := filepath.Join(wifiModule.servicesDir, "wifi")
 
@@ -78,42 +83,54 @@ func (wifiModule *WifiModule) enable(dryRun bool) module.Result {
 
 	if dryRun {
 		logging.Info(wifiModule.Name(), "would create directory %s (dry-run)", wifiModule.wifiDir)
-	} else if err := os.MkdirAll(wifiModule.wifiDir, 0700); err != nil {
+		logging.Info(wifiModule.Name(), "would write wpa_supplicant.conf to %s (dry-run)", configFilePath)
+		logging.Info(wifiModule.Name(), "would create services directory %s and write sentinel %s (dry-run)", wifiModule.servicesDir, sentinelPath)
+
+		if apply {
+			logging.Info(wifiModule.Name(), "would run systemctl start wifi-setup (dry-run)")
+		}
+
+		return module.Result{Section: wifiModule.Name(), Success: true, Message: "wifi enabled (dry-run)"}
+	}
+
+	if err := os.MkdirAll(wifiModule.wifiDir, 0700); err != nil {
 		errMsg := fmt.Sprintf("failed to create wifi directory %s: %v", wifiModule.wifiDir, err)
 		logging.Error(wifiModule.Name(), "%s", errMsg)
+
 		return module.Result{Section: wifiModule.Name(), Success: false, Error: errMsg}
 	}
 
-	if dryRun {
-		logging.Info(wifiModule.Name(), "would write wpa_supplicant.conf to %s (dry-run)", configFilePath)
-	} else {
-		logging.Info(wifiModule.Name(), "writing wpa_supplicant.conf to %s", configFilePath)
-		if err := os.WriteFile(configFilePath, []byte(wifiModule.renderWpaSupplicant()), 0600); err != nil {
-			errMsg := fmt.Sprintf("failed to write wpa_supplicant.conf: %v", err)
-			logging.Error(wifiModule.Name(), "%s", errMsg)
-			return module.Result{Section: wifiModule.Name(), Success: false, Error: errMsg}
+	logging.Info(wifiModule.Name(), "writing wpa_supplicant.conf to %s", configFilePath)
+
+	if err := os.WriteFile(configFilePath, []byte(wifiModule.renderWpaSupplicant()), 0600); err != nil {
+		errMsg := fmt.Sprintf("failed to write wpa_supplicant.conf: %v", err)
+		logging.Error(wifiModule.Name(), "%s", errMsg)
+
+		return module.Result{Section: wifiModule.Name(), Success: false, Error: errMsg}
+	}
+
+	if err := os.MkdirAll(wifiModule.servicesDir, 0750); err != nil {
+		errMsg := fmt.Sprintf("failed to create services directory %s: %v", wifiModule.servicesDir, err)
+		logging.Error(wifiModule.Name(), "%s", errMsg)
+
+		return module.Result{Section: wifiModule.Name(), Success: false, Error: errMsg}
+	}
+
+	logging.Info(wifiModule.Name(), "writing sentinel %s", sentinelPath)
+
+	if err := os.WriteFile(sentinelPath, nil, 0640); err != nil {
+		errMsg := fmt.Sprintf("failed to create wifi sentinel %s: %v", sentinelPath, err)
+		logging.Error(wifiModule.Name(), "%s", errMsg)
+
+		return module.Result{Section: wifiModule.Name(), Success: false, Error: errMsg}
+	}
+
+	if apply {
+		if err := run.Command(ctx, "systemctl", "start", "wifi-setup"); err != nil {
+			logging.Warn(wifiModule.Name(), "systemctl start wifi-setup: %v", err)
 		}
 	}
 
-	if dryRun {
-		logging.Info(wifiModule.Name(), "would create services directory %s and write sentinel %s (dry-run)", wifiModule.servicesDir, sentinelPath)
-	} else {
-		if err := os.MkdirAll(wifiModule.servicesDir, 0750); err != nil {
-			errMsg := fmt.Sprintf("failed to create services directory %s: %v", wifiModule.servicesDir, err)
-			logging.Error(wifiModule.Name(), "%s", errMsg)
-			return module.Result{Section: wifiModule.Name(), Success: false, Error: errMsg}
-		}
-		logging.Info(wifiModule.Name(), "writing sentinel %s", sentinelPath)
-		if err := os.WriteFile(sentinelPath, nil, 0640); err != nil {
-			errMsg := fmt.Sprintf("failed to create wifi sentinel %s: %v", sentinelPath, err)
-			logging.Error(wifiModule.Name(), "%s", errMsg)
-			return module.Result{Section: wifiModule.Name(), Success: false, Error: errMsg}
-		}
-	}
-
-	if dryRun {
-		return module.Result{Section: wifiModule.Name(), Success: true, Message: "wifi enabled (dry-run)"}
-	}
 	return module.Result{Section: wifiModule.Name(), Success: true, Message: "wifi enabled"}
 }
 

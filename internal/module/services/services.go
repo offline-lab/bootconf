@@ -15,6 +15,7 @@ import (
 	"github.com/offline-lab/bootconf/internal/config"
 	"github.com/offline-lab/bootconf/internal/logging"
 	"github.com/offline-lab/bootconf/internal/module"
+	"github.com/offline-lab/bootconf/internal/run"
 )
 
 // ServicesModule creates/removes sentinel files and copies default configs
@@ -39,27 +40,32 @@ func (servicesModule *ServicesModule) Name() string { return "services" }
 
 // Run processes all service entries: creating/removing sentinel files and
 // provisioning default config files as needed.
-func (servicesModule *ServicesModule) Run(_ context.Context, dryRun bool) module.Result {
+func (servicesModule *ServicesModule) Run(ctx context.Context, dryRun bool, apply bool) module.Result {
+
 	if !servicesModule.enabled {
 		return module.Result{Section: servicesModule.Name(), Success: true, Message: "services disabled"}
 	}
 
 	if dryRun {
 		logging.Info(servicesModule.Name(), "would create services directory %s (dry-run)", servicesModule.servicesDir)
+
 	} else if err := os.MkdirAll(servicesModule.servicesDir, 0750); err != nil {
 		errMsg := fmt.Sprintf("failed to create services dir %s: %v", servicesModule.servicesDir, err)
 		logging.Error(servicesModule.Name(), "%s", errMsg)
+
 		return module.Result{Section: servicesModule.Name(), Success: false, Error: errMsg}
 	}
 
 	var errs []string
+
 	for _, entry := range servicesModule.entries {
-		errs = append(errs, servicesModule.processServiceEntry(entry, dryRun)...)
+		errs = append(errs, servicesModule.processServiceEntry(ctx, entry, dryRun, apply)...)
 	}
 
 	if len(errs) > 0 {
 		errMsg := strings.Join(errs, "; ")
 		logging.Error(servicesModule.Name(), "completed with errors: %s", errMsg)
+
 		return module.Result{
 			Section: servicesModule.Name(),
 			Success: false,
@@ -71,34 +77,11 @@ func (servicesModule *ServicesModule) Run(_ context.Context, dryRun bool) module
 	return module.Result{Section: servicesModule.Name(), Success: true, Message: fmt.Sprintf("processed %d service(s)", len(servicesModule.entries))}
 }
 
-func (servicesModule *ServicesModule) processServiceEntry(entry config.ServiceEntry, dryRun bool) []string {
+func (servicesModule *ServicesModule) processServiceEntry(ctx context.Context, entry config.ServiceEntry, dryRun bool, apply bool) []string {
 	var errs []string
 
 	if entry.Sentinel {
-		sentinelPath := filepath.Join(servicesModule.servicesDir, entry.Name)
-		if entry.Enabled {
-			if dryRun {
-				logging.Info(servicesModule.Name(), "would write sentinel %s (dry-run)", sentinelPath)
-			} else {
-				logging.Info(servicesModule.Name(), "writing sentinel %s", sentinelPath)
-				if err := os.WriteFile(sentinelPath, nil, 0640); err != nil {
-					errMsg := fmt.Sprintf("service %s: failed to create sentinel %s: %v", entry.Name, sentinelPath, err)
-					logging.Error(servicesModule.Name(), "%s", errMsg)
-					return append(errs, errMsg)
-				}
-			}
-		} else {
-			if dryRun {
-				logging.Info(servicesModule.Name(), "would remove sentinel %s (dry-run)", sentinelPath)
-			} else {
-				logging.Info(servicesModule.Name(), "removing sentinel %s", sentinelPath)
-				if err := os.Remove(sentinelPath); err != nil && !os.IsNotExist(err) {
-					errMsg := fmt.Sprintf("service %s: failed to remove sentinel %s: %v", entry.Name, sentinelPath, err)
-					logging.Error(servicesModule.Name(), "%s", errMsg)
-					errs = append(errs, errMsg)
-				}
-			}
-		}
+		errs = append(errs, servicesModule.handleSentinel(ctx, entry, dryRun, apply)...)
 	}
 
 	if entry.Enabled && entry.DefaultConfig.Copy {
@@ -110,6 +93,55 @@ func (servicesModule *ServicesModule) processServiceEntry(entry config.ServiceEn
 	}
 
 	return errs
+}
+
+func (servicesModule *ServicesModule) handleSentinel(ctx context.Context, entry config.ServiceEntry, dryRun bool, apply bool) []string {
+	sentinelPath := filepath.Join(servicesModule.servicesDir, entry.Name)
+
+	if !entry.Enabled {
+		if dryRun {
+			logging.Info(servicesModule.Name(), "would remove sentinel %s (dry-run)", sentinelPath)
+			return nil
+		}
+
+		logging.Info(servicesModule.Name(), "removing sentinel %s", sentinelPath)
+
+		if err := os.Remove(sentinelPath); err != nil && !os.IsNotExist(err) {
+			errMsg := fmt.Sprintf("service %s: failed to remove sentinel %s: %v", entry.Name, sentinelPath, err)
+			logging.Error(servicesModule.Name(), "%s", errMsg)
+
+			return []string{errMsg}
+		}
+
+		return nil
+	}
+
+	if dryRun {
+		logging.Info(servicesModule.Name(), "would write sentinel %s (dry-run)", sentinelPath)
+
+		if apply {
+			logging.Info(servicesModule.Name(), "would run systemctl start %s (dry-run)", entry.SystemdUnit())
+		}
+
+		return nil
+	}
+
+	logging.Info(servicesModule.Name(), "writing sentinel %s", sentinelPath)
+
+	if err := os.WriteFile(sentinelPath, nil, 0640); err != nil {
+		errMsg := fmt.Sprintf("service %s: failed to create sentinel %s: %v", entry.Name, sentinelPath, err)
+		logging.Error(servicesModule.Name(), "%s", errMsg)
+
+		return []string{errMsg}
+	}
+
+	if apply {
+		if err := run.Command(ctx, "systemctl", "start", entry.SystemdUnit()); err != nil {
+			logging.Warn(servicesModule.Name(), "systemctl start %s: %v", entry.SystemdUnit(), err)
+		}
+	}
+
+	return nil
 }
 
 // provisionConfigFile copies the default config from source to destination.
@@ -132,9 +164,11 @@ func provisionConfigFile(sectionName string, entry config.ServiceEntry, dryRun b
 	logging.Info(sectionName, "copying %s → %s", entry.DefaultConfig.Source, destinationPath)
 
 	sourceFile, err := os.Open(entry.DefaultConfig.Source)
+
 	if err != nil {
 		return fmt.Errorf("failed to open source %s: %w", entry.DefaultConfig.Source, err)
 	}
+
 	defer func() { _ = sourceFile.Close() }()
 
 	if err := os.MkdirAll(filepath.Dir(destinationPath), 0750); err != nil {
@@ -142,17 +176,20 @@ func provisionConfigFile(sectionName string, entry config.ServiceEntry, dryRun b
 	}
 
 	destinationFile, err := os.Create(destinationPath)
+
 	if err != nil {
 		return fmt.Errorf("failed to create %s: %w", destinationPath, err)
 	}
 
 	if _, err := io.Copy(destinationFile, sourceFile); err != nil {
 		_ = destinationFile.Close()
+
 		return fmt.Errorf("failed to copy to %s: %w", destinationPath, err)
 	}
 
 	if err := destinationFile.Chmod(0640); err != nil {
 		_ = destinationFile.Close()
+
 		return fmt.Errorf("failed to set permissions on %s: %w", destinationPath, err)
 	}
 

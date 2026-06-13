@@ -41,7 +41,7 @@ func (shellModule *ShellModule) Name() string { return "shell" }
 
 // Run executes each command in order. A command with allow_fail: false that
 // exits non-zero stops execution and marks the module as failed.
-func (shellModule *ShellModule) Run(ctx context.Context, dryRun bool) module.Result {
+func (shellModule *ShellModule) Run(ctx context.Context, dryRun bool, _ bool) module.Result {
 	if !shellModule.enabled {
 		return module.Result{Section: shellModule.Name(), Success: true, Message: "shell disabled"}
 	}
@@ -50,6 +50,7 @@ func (shellModule *ShellModule) Run(ctx context.Context, dryRun bool) module.Res
 		if err := os.MkdirAll(shellModule.directory, 0750); err != nil {
 			errMsg := fmt.Sprintf("failed to create shell directory %s: %v", shellModule.directory, err)
 			logging.Error(shellModule.Name(), "%s", errMsg)
+
 			return module.Result{Section: shellModule.Name(), Success: false, Error: errMsg}
 		}
 	}
@@ -57,14 +58,18 @@ func (shellModule *ShellModule) Run(ctx context.Context, dryRun bool) module.Res
 	ran := 0
 	for _, command := range shellModule.commands {
 		skipped, err := shellModule.runCommand(ctx, command, dryRun)
+
 		if skipped {
 			continue
 		}
+
 		if !dryRun {
 			ran++
 		}
+
 		if err != nil {
 			errMsg := fmt.Sprintf("command %q: %v", command.Name, err)
+
 			return module.Result{Section: shellModule.Name(), Success: false, Error: errMsg}
 		}
 	}
@@ -72,6 +77,7 @@ func (shellModule *ShellModule) Run(ctx context.Context, dryRun bool) module.Res
 	if dryRun {
 		return module.Result{Section: shellModule.Name(), Success: true, Message: "shell configured (dry-run)"}
 	}
+
 	return module.Result{Section: shellModule.Name(), Success: true, Message: fmt.Sprintf("ran %d command(s)", ran)}
 }
 
@@ -84,12 +90,14 @@ func (shellModule *ShellModule) runCommand(ctx context.Context, command config.S
 	if command.FirstBoot {
 		if _, err := os.Stat(firstBootSentinel); err == nil {
 			logging.Debug(shellModule.Name(), "skipping %q: already ran on first boot", command.Name)
+
 			return true, nil
 		}
 	}
 
 	if dryRun {
 		logging.Info(shellModule.Name(), "would run command %q (dry-run)", command.Name)
+
 		return false, nil
 	}
 
@@ -99,9 +107,11 @@ func (shellModule *ShellModule) runCommand(ctx context.Context, command config.S
 
 	if shellModule.path != "" {
 		current := os.Getenv("PATH")
+
 		if current == "" {
 			current = "/usr/sbin:/usr/bin:/sbin:/bin"
 		}
+
 		cmd.Env = append(os.Environ(), "PATH="+strings.Join([]string{shellModule.path, current}, ":"))
 	}
 
@@ -117,6 +127,7 @@ func (shellModule *ShellModule) runCommand(ctx context.Context, command config.S
 	if runErr != nil {
 		if exitErr, ok := runErr.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
+
 		} else {
 			exitCode = -1
 		}

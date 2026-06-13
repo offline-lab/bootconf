@@ -17,5 +17,5 @@ type Result struct {
 // Module is the interface each configuration section must implement.
 type Module interface {
 	Name() string
-	Run(ctx context.Context, dryRun bool) Result
+	Run(ctx context.Context, dryRun bool, apply bool) Result
 }

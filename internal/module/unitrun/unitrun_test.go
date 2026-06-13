@@ -11,7 +11,7 @@ import (
 )
 
 func TestUnitRunDisabled(t *testing.T) {
-	result := New(config.UnitRunConfig{Enabled: false}).Run(context.Background(), false)
+	result := New(config.UnitRunConfig{Enabled: false}).Run(context.Background(), false, false)
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
 	}
@@ -33,7 +33,7 @@ func TestUnitRunDryRunNoWrites(t *testing.T) {
 	})
 	module.unitsDir = unitsDir
 
-	result := module.Run(context.Background(), true)
+	result := module.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
@@ -72,7 +72,7 @@ func TestUnitRunProvisionWritesFiles(t *testing.T) {
 
 	// systemctl enable will fail in CI but file writing happens before that.
 	// We verify file content and accept the systemctl error.
-	module.Run(context.Background(), false)
+	module.Run(context.Background(), false, false)
 
 	scriptPath := filepath.Join(scriptDir, "my-task.sh")
 	scriptContent, err := os.ReadFile(scriptPath)
@@ -130,7 +130,7 @@ func TestUnitRunRemoveDeletesFiles(t *testing.T) {
 	module.unitsDir = unitsDir
 
 	// systemctl disable may fail but file removal still runs.
-	module.Run(context.Background(), false)
+	module.Run(context.Background(), false, false)
 
 	if _, err := os.Stat(serviceFilePath); err == nil {
 		t.Error("unit file should have been removed")
@@ -153,7 +153,7 @@ func TestUnitRunFirstBootInjectsCondition(t *testing.T) {
 	})
 	module.unitsDir = unitsDir
 
-	module.Run(context.Background(), false)
+	module.Run(context.Background(), false, false)
 
 	serviceFilePath := filepath.Join(unitsDir, "bootconf-first-boot-task.service")
 	content, err := os.ReadFile(serviceFilePath)

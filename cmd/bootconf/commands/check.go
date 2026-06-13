@@ -33,6 +33,7 @@ func runCheck(_ *cobra.Command, _ []string) {
 	}
 
 	cfg, err := config.Load(configPath)
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -74,9 +75,11 @@ func buildHealthChecks(cfg *config.Config) []healthCheck {
 
 	if cfg.SSH.Enabled {
 		sshDaemon := "dropbear"
+
 		if cfg.SSH.Daemon == "openssh" {
 			sshDaemon = "ssh"
 		}
+
 		checks = append(checks, healthCheck{
 			label: "ssh",
 			check: func() error { return checkActiveService(sshDaemon) },
@@ -92,10 +95,10 @@ func buildHealthChecks(cfg *config.Config) []healthCheck {
 
 	for _, service := range cfg.Services.Services {
 		if service.Enabled {
-			serviceName := service.Name
+			unit := service.SystemdUnit()
 			checks = append(checks, healthCheck{
-				label: "service/" + serviceName,
-				check: func() error { return checkActiveService(serviceName) },
+				label: "service/" + service.Name,
+				check: func() error { return checkActiveService(unit) },
 			})
 		}
 	}
@@ -118,6 +121,7 @@ func checkActiveService(service string) error {
 	if err := exec.Command("systemctl", "is-active", service).Run(); err != nil {
 		return fmt.Errorf("service %s is not active", service)
 	}
+
 	return nil
 }
 

@@ -30,7 +30,7 @@ func TestFilesCopyFile(t *testing.T) {
 		},
 	})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -90,7 +90,7 @@ func TestFilesExistingFileGetsNewSuffix(t *testing.T) {
 		},
 	})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -131,7 +131,7 @@ func TestFilesChmodApplied(t *testing.T) {
 		},
 	})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -160,7 +160,7 @@ func TestFilesMissingSource(t *testing.T) {
 		},
 	})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if result.Success {
 		t.Error("expected failure for missing source")
@@ -194,7 +194,7 @@ func TestFilesDryRunNoWrites(t *testing.T) {
 		},
 	})
 
-	result := module.Run(context.Background(), true)
+	result := module.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -213,7 +213,7 @@ func TestFilesDryRunNoWrites(t *testing.T) {
 func TestFilesDisabled(t *testing.T) {
 	module := New(config.FilesConfig{Enabled: false})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -228,7 +228,7 @@ func TestFilesDisabled(t *testing.T) {
 func TestFilesEmptyList(t *testing.T) {
 	module := New(config.FilesConfig{Enabled: true})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -271,7 +271,7 @@ func TestFilesMultipleFiles(t *testing.T) {
 		},
 	})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -325,7 +325,7 @@ func TestFilesDefaultChmod640(t *testing.T) {
 		},
 	})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -361,7 +361,7 @@ func TestFilesDestinationDirCreated(t *testing.T) {
 		},
 	})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -401,7 +401,7 @@ func TestFilesMultipleErrors(t *testing.T) {
 		},
 	})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if result.Success {
 		t.Error("expected failure when all sources are missing")
@@ -451,7 +451,7 @@ func TestFilesPartialSuccess(t *testing.T) {
 		},
 	})
 
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if result.Success {
 		t.Error("expected failure due to missing source")
@@ -495,7 +495,7 @@ func TestFilesContentWrite(t *testing.T) {
 		Files: []config.FileEntry{
 			{Content: "Welcome to bootconf\n", Destination: destFile, Chmod: "644"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
@@ -523,7 +523,7 @@ func TestFilesContentDryRun(t *testing.T) {
 		Files: []config.FileEntry{
 			{Content: "Hello\n", Destination: destFile, Chmod: "640"},
 		},
-	}).Run(context.Background(), true)
+	}).Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
@@ -548,7 +548,7 @@ func TestFilesContentExistingGetsNewSuffix(t *testing.T) {
 		Files: []config.FileEntry{
 			{Content: "new\n", Destination: destFile, Chmod: "640"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	original, _ := os.ReadFile(destFile)
 	if string(original) != "old\n" {

@@ -166,10 +166,10 @@ CONFIG="/etc/bootconf/test-config.yaml"
 INVALID_CONFIG="/boot/firmware/config/invalid-config.yaml"
 
 echo "=== Building test environment ==="
-mkdir -p /data/bootconf /data/config/ssh /data/config/wifi /data/config/services
+mkdir -p /data/config/bootconf /data/config/ssh /data/config/wifi /data/config/services
 mkdir -p /data/config/users /data/home /data/config/app /data/config/secrets
 mkdir -p /data/config/daemon /data/config/monitor /data/config/testservice
-mkdir -p /data/bootconf/shell /data/bootconf/scripts
+mkdir -p /data/config/bootconf/shell /data/config/bootconf/scripts
 mkdir -p /etc/sudoers.d /etc/systemd/system
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -241,8 +241,8 @@ assert_file_not_exists /data/config/app/app.conf
 assert_dir_not_exists /data/home/admin
 assert_file_not_exists /data/config/app/inline.conf
 assert_file_not_exists /data/config/app/rendered.conf
-assert_file_not_exists /data/bootconf/shell/hello-world.log
-assert_file_not_exists /data/bootconf/scripts/e2e-task.sh
+assert_file_not_exists /data/config/bootconf/shell/hello-world.log
+assert_file_not_exists /data/config/bootconf/scripts/e2e-task.sh
 
 echo ""
 echo "=== Test: bootconf run --dry-run --section wifi (single section) ==="
@@ -370,24 +370,24 @@ assert_file_perms /data/config/app/rendered.conf "640"
 echo ""
 echo "=== Verifying shell configuration ==="
 
-assert_file_exists /data/bootconf/shell/hello-world.log
-assert_file_contains /data/bootconf/shell/hello-world.log "Exit code: 0"
-assert_file_contains /data/bootconf/shell/hello-world.log "hello from shell"
+assert_file_exists /data/config/bootconf/shell/hello-world.log
+assert_file_contains /data/config/bootconf/shell/hello-world.log "Exit code: 0"
+assert_file_contains /data/config/bootconf/shell/hello-world.log "hello from shell"
 
-assert_file_exists /data/bootconf/shell/first-boot-only.log
-assert_file_contains /data/bootconf/shell/first-boot-only.log "Exit code: 0"
-assert_file_contains /data/bootconf/shell/first-boot-only.log "first boot setup"
-assert_file_exists /data/bootconf/shell/first-boot-only.firstboot
+assert_file_exists /data/config/bootconf/shell/first-boot-only.log
+assert_file_contains /data/config/bootconf/shell/first-boot-only.log "Exit code: 0"
+assert_file_contains /data/config/bootconf/shell/first-boot-only.log "first boot setup"
+assert_file_exists /data/config/bootconf/shell/first-boot-only.firstboot
 
 # ─── UnitRun ─────────────────────────────────────────────────────────────────
 
 echo ""
 echo "=== Verifying unitrun configuration ==="
 
-assert_file_exists /data/bootconf/scripts/e2e-task.sh
-assert_file_contains /data/bootconf/scripts/e2e-task.sh "#!/bin/bash"
-assert_file_contains /data/bootconf/scripts/e2e-task.sh "e2e task ran"
-assert_file_perms /data/bootconf/scripts/e2e-task.sh "750"
+assert_file_exists /data/config/bootconf/scripts/e2e-task.sh
+assert_file_contains /data/config/bootconf/scripts/e2e-task.sh "#!/bin/bash"
+assert_file_contains /data/config/bootconf/scripts/e2e-task.sh "e2e task ran"
+assert_file_perms /data/config/bootconf/scripts/e2e-task.sh "750"
 
 assert_file_exists /etc/systemd/system/bootconf-e2e-task.service
 assert_file_contains /etc/systemd/system/bootconf-e2e-task.service "Description=Bootconf Unit Task e2e-task"
@@ -400,17 +400,17 @@ assert_file_contains /etc/systemd/system/bootconf-e2e-task.service "WantedBy=mul
 echo ""
 echo "=== Verifying status file ==="
 
-assert_file_exists /data/bootconf/status.json
-assert_file_contains /data/bootconf/status.json '"overall": true'
-assert_file_contains /data/bootconf/status.json '"section": "wifi"'
-assert_file_contains /data/bootconf/status.json '"section": "ssh"'
-assert_file_contains /data/bootconf/status.json '"section": "services"'
-assert_file_contains /data/bootconf/status.json '"section": "users"'
-assert_file_contains /data/bootconf/status.json '"section": "files"'
-assert_file_contains /data/bootconf/status.json '"section": "system"'
-assert_file_contains /data/bootconf/status.json '"section": "templates"'
-assert_file_contains /data/bootconf/status.json '"section": "shell"'
-assert_file_contains /data/bootconf/status.json '"section": "unitrun"'
+assert_file_exists /data/config/bootconf/status.json
+assert_file_contains /data/config/bootconf/status.json '"overall": true'
+assert_file_contains /data/config/bootconf/status.json '"section": "wifi"'
+assert_file_contains /data/config/bootconf/status.json '"section": "ssh"'
+assert_file_contains /data/config/bootconf/status.json '"section": "services"'
+assert_file_contains /data/config/bootconf/status.json '"section": "users"'
+assert_file_contains /data/config/bootconf/status.json '"section": "files"'
+assert_file_contains /data/config/bootconf/status.json '"section": "system"'
+assert_file_contains /data/config/bootconf/status.json '"section": "templates"'
+assert_file_contains /data/config/bootconf/status.json '"section": "shell"'
+assert_file_contains /data/config/bootconf/status.json '"section": "unitrun"'
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 5: STATUS COMMAND
@@ -469,10 +469,10 @@ assert_file_exists /data/config/app/app.conf
 
 # Existing files should NOT be overwritten - original content preserved
 assert_file_contains /data/config/app/app.conf "app_name=bootconf"
-assert_file_exists /data/bootconf/status.json
+assert_file_exists /data/config/bootconf/status.json
 assert_file_exists /data/config/app/rendered.conf
-assert_file_exists /data/bootconf/shell/hello-world.log
-assert_file_exists /data/bootconf/scripts/e2e-task.sh
+assert_file_exists /data/config/bootconf/shell/hello-world.log
+assert_file_exists /data/config/bootconf/scripts/e2e-task.sh
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 7: RUN COMMAND - SINGLE SECTION
@@ -554,7 +554,7 @@ echo ""
 echo "=== Test: shell firstboot command not re-run on second boot ==="
 
 # Record log mtime before re-run
-FIRSTBOOT_LOG=/data/bootconf/shell/first-boot-only.log
+FIRSTBOOT_LOG=/data/config/bootconf/shell/first-boot-only.log
 BEFORE_MTIME=$(stat -c '%Y' "$FIRSTBOOT_LOG" 2>/dev/null || echo "0")
 
 bootconf run --config "$CONFIG"
@@ -562,7 +562,7 @@ bootconf run --config "$CONFIG"
 AFTER_MTIME=$(stat -c '%Y' "$FIRSTBOOT_LOG" 2>/dev/null || echo "0")
 
 # Sentinel must still exist
-assert_file_exists /data/bootconf/shell/first-boot-only.firstboot
+assert_file_exists /data/config/bootconf/shell/first-boot-only.firstboot
 
 # Log must not have been rewritten (command was skipped)
 if [ "$BEFORE_MTIME" = "$AFTER_MTIME" ]; then
@@ -574,7 +574,7 @@ else
 fi
 
 # hello-world (no firstboot) should run every time — log is always fresh
-assert_file_exists /data/bootconf/shell/hello-world.log
+assert_file_exists /data/config/bootconf/shell/hello-world.log
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SECTION 13: STATUS FILE PERSISTENCE
@@ -583,11 +583,11 @@ assert_file_exists /data/bootconf/shell/hello-world.log
 echo ""
 echo "=== Test: status file persists across runs ==="
 
-assert_file_exists /data/bootconf/status.json
+assert_file_exists /data/config/bootconf/status.json
 
-TIMESTAMP=$(python3 -c "import json; print(json.load(open('/data/bootconf/status.json'))['timestamp'])" 2>/dev/null || \
-            jq -r '.timestamp' /data/bootconf/status.json 2>/dev/null || \
-            grep -o '"timestamp": "[^"]*"' /data/bootconf/status.json | head -1)
+TIMESTAMP=$(python3 -c "import json; print(json.load(open('/data/config/bootconf/status.json'))['timestamp'])" 2>/dev/null ||
+    jq -r '.timestamp' /data/config/bootconf/status.json 2>/dev/null ||
+    grep -o '"timestamp": "[^"]*"' /data/config/bootconf/status.json | head -1)
 
 if [ -n "$TIMESTAMP" ]; then
     PASS=$((PASS + 1))

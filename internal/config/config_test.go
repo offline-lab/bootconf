@@ -215,8 +215,8 @@ func TestSetDefaults(t *testing.T) {
 	cfg := &Config{}
 	cfg.SetDefaults()
 
-	if cfg.Bootconf.Directory != "/data/bootconf" {
-		t.Errorf("Bootconf.Directory default = %q, want %q", cfg.Bootconf.Directory, "/data/bootconf")
+	if cfg.Bootconf.Directory != "/data/config/bootconf" {
+		t.Errorf("Bootconf.Directory default = %q, want %q", cfg.Bootconf.Directory, "/data/config/bootconf")
 	}
 	if cfg.SSH.Keytype != "ed25519" {
 		t.Errorf("SSH.Keytype default = %q, want %q", cfg.SSH.Keytype, "ed25519")

@@ -37,7 +37,7 @@ func New(cfg config.SystemConfig, statusDir string) *SystemModule {
 func (systemModule *SystemModule) Name() string { return "system" }
 
 // Run applies hostname and timezone configuration if the section is enabled.
-func (systemModule *SystemModule) Run(ctx context.Context, dryRun bool) module.Result {
+func (systemModule *SystemModule) Run(ctx context.Context, dryRun bool, _ bool) module.Result {
 	if !systemModule.enabled {
 		return module.Result{Section: systemModule.Name(), Success: true, Message: "system disabled"}
 	}
@@ -52,33 +52,38 @@ func (systemModule *SystemModule) Run(ctx context.Context, dryRun bool) module.R
 		return module.Result{Section: systemModule.Name(), Success: false, Error: err}
 	}
 
-	if systemModule.hostname != "" {
-		if dryRun {
+	if dryRun {
+		if systemModule.hostname != "" {
 			logging.Info(systemModule.Name(), "would run: hostnamectl set-hostname %q (dry-run)", systemModule.hostname)
-		} else {
-			logging.Info(systemModule.Name(), "setting hostname to %q", systemModule.hostname)
-			if err := run.Command(ctx, "hostnamectl", "set-hostname", systemModule.hostname); err != nil {
-				logging.Error(systemModule.Name(), "failed to set hostname: %v", err)
-				return module.Result{Section: systemModule.Name(), Success: false, Error: fmt.Sprintf("failed to set hostname: %v", err)}
-			}
+		}
+
+		if systemModule.timezone != "" {
+			logging.Info(systemModule.Name(), "would run: timedatectl set-timezone %q (dry-run)", systemModule.timezone)
+		}
+
+		return module.Result{Section: systemModule.Name(), Success: true, Message: "system configured (dry-run)"}
+	}
+
+	if systemModule.hostname != "" {
+		logging.Info(systemModule.Name(), "setting hostname to %q", systemModule.hostname)
+
+		if err := run.Command(ctx, "hostnamectl", "set-hostname", systemModule.hostname); err != nil {
+			logging.Error(systemModule.Name(), "failed to set hostname: %v", err)
+
+			return module.Result{Section: systemModule.Name(), Success: false, Error: fmt.Sprintf("failed to set hostname: %v", err)}
 		}
 	}
 
 	if systemModule.timezone != "" {
-		if dryRun {
-			logging.Info(systemModule.Name(), "would run: timedatectl set-timezone %q (dry-run)", systemModule.timezone)
-		} else {
-			logging.Info(systemModule.Name(), "setting timezone to %q", systemModule.timezone)
-			if err := run.Command(ctx, "timedatectl", "set-timezone", systemModule.timezone); err != nil {
-				logging.Error(systemModule.Name(), "failed to set timezone: %v", err)
-				return module.Result{Section: systemModule.Name(), Success: false, Error: fmt.Sprintf("failed to set timezone: %v", err)}
-			}
+		logging.Info(systemModule.Name(), "setting timezone to %q", systemModule.timezone)
+
+		if err := run.Command(ctx, "timedatectl", "set-timezone", systemModule.timezone); err != nil {
+			logging.Error(systemModule.Name(), "failed to set timezone: %v", err)
+
+			return module.Result{Section: systemModule.Name(), Success: false, Error: fmt.Sprintf("failed to set timezone: %v", err)}
 		}
 	}
 
-	if dryRun {
-		return module.Result{Section: systemModule.Name(), Success: true, Message: "system configured (dry-run)"}
-	}
 	return module.Result{Section: systemModule.Name(), Success: true, Message: "system configured"}
 }
 
@@ -87,9 +92,12 @@ func (systemModule *SystemModule) Run(ctx context.Context, dryRun bool) module.R
 // since hostnamectl/timedatectl both require a writable /run.
 func isWritable(dir string) bool {
 	probeFile := filepath.Join(dir, ".bootconf-writable")
+
 	if err := os.WriteFile(probeFile, []byte{}, 0600); err != nil {
 		return false
 	}
+
 	_ = os.Remove(probeFile)
+
 	return true
 }

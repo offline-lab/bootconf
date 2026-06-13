@@ -18,30 +18,41 @@ type LogLevel int
 const (
 	// DEBUG is the most verbose level, intended for development.
 	DEBUG LogLevel = iota
+
 	// INFO is the default level for normal operational messages.
 	INFO
+
 	// WARN indicates potential issues that are not fatal.
 	WARN
+
 	// ERROR indicates failures that should be investigated.
 	ERROR
+
 	// FATAL indicates unrecoverable errors.
 	FATAL
 )
 
 func (l LogLevel) String() string {
 	switch l {
+
 	case DEBUG:
 		return "DEBUG"
+
 	case INFO:
 		return "INFO"
+
 	case WARN:
 		return "WARN"
+
 	case ERROR:
 		return "ERROR"
+
 	case FATAL:
 		return "FATAL"
+
 	default:
 		return "UNKNOWN"
+
 	}
 }
 
@@ -88,8 +99,10 @@ func (l *Logger) logf(level LogLevel, section, format string, args ...interface{
 	if level < l.level {
 		return
 	}
+
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	msg := fmt.Sprintf(format, args...)
+
 	l.logger.Printf("bootconf: %s %s section=%s %s", timestamp, level, section, msg)
 }
 

@@ -32,7 +32,7 @@ func New(cfg config.FilesConfig) *FilesModule {
 func (filesModule *FilesModule) Name() string { return "files" }
 
 // Run copies all configured files, never overwriting existing content.
-func (filesModule *FilesModule) Run(_ context.Context, dryRun bool) module.Result {
+func (filesModule *FilesModule) Run(_ context.Context, dryRun bool, _ bool) module.Result {
 	if !filesModule.enabled {
 		return module.Result{Section: filesModule.Name(), Success: true, Message: "files disabled"}
 	}
@@ -51,9 +51,11 @@ func (filesModule *FilesModule) Run(_ context.Context, dryRun bool) module.Resul
 	if len(errs) > 0 {
 		result.Error = fmt.Sprintf("%d errors: %v", len(errs), errs)
 		result.Message = fmt.Sprintf("completed with %d errors", len(errs))
+
 	} else if len(filesModule.entries) > 0 {
 		if dryRun {
 			result.Message = fmt.Sprintf("would write %d file(s) (dry-run)", len(filesModule.entries))
+
 		} else {
 			result.Message = fmt.Sprintf("wrote %d file(s)", len(filesModule.entries))
 		}
@@ -78,6 +80,7 @@ func (filesModule *FilesModule) copyEntry(entry config.FileEntry, dryRun bool) e
 		} else {
 			logging.Info(filesModule.Name(), "would write content → %s (chmod %s) (dry-run)", destinationPath, entry.Chmod)
 		}
+
 		return nil
 	}
 
@@ -89,19 +92,23 @@ func (filesModule *FilesModule) copyEntry(entry config.FileEntry, dryRun bool) e
 		logging.Info(filesModule.Name(), "copying %s → %s", entry.Source, destinationPath)
 
 		sourceFile, err := os.Open(entry.Source)
+
 		if err != nil {
 			return fmt.Errorf("%s: open source: %w", entry.Source, err)
 		}
+
 		defer func() { _ = sourceFile.Close() }()
 
 		// Create with 0600; Chmod below sets the final permissions from config.
 		destinationFile, err := os.OpenFile(destinationPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
+
 		if err != nil {
 			return fmt.Errorf("%s: create destination: %w", entry.Destination, err)
 		}
 
 		_, copyErr := io.Copy(destinationFile, sourceFile)
 		_ = destinationFile.Close()
+
 		if copyErr != nil {
 			return fmt.Errorf("%s: copy: %w", entry.Destination, copyErr)
 		}
@@ -115,6 +122,7 @@ func (filesModule *FilesModule) copyEntry(entry config.FileEntry, dryRun bool) e
 	}
 
 	mode, err := parseChmod(entry.Chmod)
+
 	if err != nil {
 		return fmt.Errorf("%s: invalid chmod %q: %w", entry.Destination, entry.Chmod, err)
 	}
@@ -134,11 +142,14 @@ func (filesModule *FilesModule) copyEntry(entry config.FileEntry, dryRun bool) e
 // Values above 0777 are rejected — this tool must never create setuid files.
 func parseChmod(octalStr string) (os.FileMode, error) {
 	value, err := strconv.ParseUint(octalStr, 8, 32)
+
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse %q as octal: %w", octalStr, err)
 	}
+
 	if value > 0777 {
 		return 0, fmt.Errorf("chmod %q must not include setuid/setgid/sticky bits", octalStr)
 	}
+
 	return os.FileMode(value), nil
 }
