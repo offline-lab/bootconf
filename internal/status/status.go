@@ -30,14 +30,19 @@ func Write(dir string, runStatus *RunStatus) error {
 	if err := os.MkdirAll(dir, 0750); err != nil {
 		return fmt.Errorf("failed to create status dir: %w", err)
 	}
+
 	data, err := json.MarshalIndent(runStatus, "", "  ")
+
 	if err != nil {
 		return fmt.Errorf("failed to marshal status: %w", err)
 	}
+
 	path := filepath.Join(dir, "status.json")
+
 	if err := os.WriteFile(path, data, 0640); err != nil {
 		return fmt.Errorf("failed to write status: %w", err)
 	}
+
 	return nil
 }
 
@@ -45,11 +50,13 @@ func Write(dir string, runStatus *RunStatus) error {
 func Read(dir string) (*RunStatus, error) {
 	path := filepath.Join(dir, "status.json")
 	data, err := os.ReadFile(path)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to read status: %w", err)
 	}
 
 	var runStatus RunStatus
+
 	if err := json.Unmarshal(data, &runStatus); err != nil {
 		return nil, fmt.Errorf("failed to parse status: %w", err)
 	}

@@ -3,7 +3,7 @@ set -euo pipefail
 
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/bootconf"
-DATA_DIR="/data/bootconf"
+DATA_DIR="/data/config/bootconf"
 
 echo "=== Bootconf Uninstallation Script ==="
 echo

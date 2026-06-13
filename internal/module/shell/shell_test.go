@@ -11,7 +11,7 @@ import (
 )
 
 func TestShellDisabled(t *testing.T) {
-	result := New(config.ShellConfig{Enabled: false}).Run(context.Background(), false)
+	result := New(config.ShellConfig{Enabled: false}).Run(context.Background(), false, false)
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
 	}
@@ -29,7 +29,7 @@ func TestShellDryRunNoWrites(t *testing.T) {
 		Commands: []config.ShellCommand{
 			{Name: "test-cmd", AllowFail: false, Command: "echo hello"},
 		},
-	}).Run(context.Background(), true)
+	}).Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
@@ -52,7 +52,7 @@ func TestShellCommandSuccess(t *testing.T) {
 		Commands: []config.ShellCommand{
 			{Name: "echo-test", AllowFail: false, Command: "echo hello world"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
@@ -84,7 +84,7 @@ func TestShellAllowFailContinues(t *testing.T) {
 			{Name: "fail-ok", AllowFail: true, Command: "exit 1"},
 			{Name: "after-fail", AllowFail: false, Command: "echo ok"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success when only allow_fail commands fail, got: %s", result.Error)
@@ -112,7 +112,7 @@ func TestShellNoAllowFailStops(t *testing.T) {
 			{Name: "hard-fail", AllowFail: false, Command: "exit 2"},
 			{Name: "should-not-run", AllowFail: false, Command: "echo nope"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	if result.Success {
 		t.Fatal("expected failure when allow_fail is false and command exits non-zero")
@@ -138,7 +138,7 @@ func TestShellFirstBootRunsOnce(t *testing.T) {
 	}
 
 	// First run: command executes.
-	result := New(moduleCfg).Run(context.Background(), false)
+	result := New(moduleCfg).Run(context.Background(), false, false)
 	if !result.Success {
 		t.Fatalf("first run failed: %s", result.Error)
 	}
@@ -153,7 +153,7 @@ func TestShellFirstBootRunsOnce(t *testing.T) {
 	}
 
 	// Second run: command is skipped.
-	result = New(moduleCfg).Run(context.Background(), false)
+	result = New(moduleCfg).Run(context.Background(), false, false)
 	if !result.Success {
 		t.Fatalf("second run failed: %s", result.Error)
 	}
@@ -172,7 +172,7 @@ func TestShellFirstBootSentinelWrittenOnFailure(t *testing.T) {
 		Commands: []config.ShellCommand{
 			{Name: "fail-once", AllowFail: true, FirstBoot: true, Command: "exit 1"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success (allow_fail=true), got: %s", result.Error)
@@ -201,7 +201,7 @@ func TestShellPathInjected(t *testing.T) {
 		Commands: []config.ShellCommand{
 			{Name: "path-test", Command: "sentinel-bin"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
@@ -225,7 +225,7 @@ func TestShellLogFormat(t *testing.T) {
 		Commands: []config.ShellCommand{
 			{Name: "log-test", AllowFail: true, Command: "echo out; echo err >&2; exit 3"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	logContent, err := os.ReadFile(filepath.Join(workDir, "log-test.log"))
 	if err != nil {

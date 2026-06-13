@@ -51,58 +51,75 @@ func New(cfg config.SSHConfig, servicesDir string) *SSHModule {
 func (sshModule *SSHModule) Name() string { return "ssh" }
 
 // Run enables or disables SSH based on configuration, generating host keys if needed.
-func (sshModule *SSHModule) Run(ctx context.Context, dryRun bool) module.Result {
+func (sshModule *SSHModule) Run(ctx context.Context, dryRun bool, apply bool) module.Result {
 	sentinelPath := filepath.Join(sshModule.servicesDir, "ssh")
 
 	if !sshModule.enabled {
 		logging.Info(sshModule.Name(), "disabling ssh, removing sentinel %s", sentinelPath)
-		if dryRun {
-			logging.Info(sshModule.Name(), "would remove %s (dry-run)", sentinelPath)
-		} else {
+
+		if !dryRun {
 			if err := os.Remove(sentinelPath); err != nil && !os.IsNotExist(err) {
 				logging.Warn(sshModule.Name(), "failed to remove sentinel %s: %v", sentinelPath, err)
 			}
 		}
+
 		return module.Result{Section: sshModule.Name(), Success: true, Message: "ssh disabled"}
 	}
 
 	if sshModule.daemon != "dropbear" && sshModule.daemon != "openssh" {
 		err := fmt.Sprintf("invalid daemon %q: must be dropbear or openssh", sshModule.daemon)
 		logging.Error(sshModule.Name(), "%s", err)
+
 		return module.Result{Section: sshModule.Name(), Success: false, Error: err}
 	}
 
 	hostKeyPath := filepath.Join(sshModule.sshDir, "hostkey")
 
+	if dryRun {
+		if sshModule.generateHostKeys {
+			if _, err := os.Stat(hostKeyPath); os.IsNotExist(err) {
+				logging.Info(sshModule.Name(), "would generate host key at %s using %s (dry-run)", hostKeyPath, sshModule.daemon)
+			}
+		}
+
+		logging.Info(sshModule.Name(), "would write sentinel %s (dry-run)", sentinelPath)
+
+		if apply {
+			logging.Info(sshModule.Name(), "would run systemctl start %s (dry-run)", sshModule.daemon)
+		}
+
+		return module.Result{Section: sshModule.Name(), Success: true, Message: "ssh enabled (dry-run)"}
+	}
+
 	if sshModule.generateHostKeys {
 		if _, err := os.Stat(hostKeyPath); os.IsNotExist(err) {
-			if dryRun {
-				logging.Info(sshModule.Name(), "would generate host key at %s using %s (dry-run)", hostKeyPath, sshModule.daemon)
-			} else {
-				logging.Info(sshModule.Name(), "generating host key at %s using %s", hostKeyPath, sshModule.daemon)
-				if err := sshModule.generateHostKey(ctx, hostKeyPath); err != nil {
-					logging.Error(sshModule.Name(), "failed to generate host key: %v", err)
-					return module.Result{Section: sshModule.Name(), Success: false, Error: err.Error()}
-				}
+			logging.Info(sshModule.Name(), "generating host key at %s using %s", hostKeyPath, sshModule.daemon)
+
+			if err := sshModule.generateHostKey(ctx, hostKeyPath); err != nil {
+				logging.Error(sshModule.Name(), "failed to generate host key: %v", err)
+
+				return module.Result{Section: sshModule.Name(), Success: false, Error: err.Error()}
 			}
+
 		} else {
 			logging.Debug(sshModule.Name(), "host key already exists at %s, skipping generation", hostKeyPath)
 		}
 	}
 
-	if dryRun {
-		logging.Info(sshModule.Name(), "would write sentinel %s (dry-run)", sentinelPath)
-	} else {
-		logging.Info(sshModule.Name(), "writing sentinel %s", sentinelPath)
-		if err := writeSentinel(sentinelPath); err != nil {
-			logging.Error(sshModule.Name(), "failed to write sentinel: %v", err)
-			return module.Result{Section: sshModule.Name(), Success: false, Error: err.Error()}
+	logging.Info(sshModule.Name(), "writing sentinel %s", sentinelPath)
+
+	if err := writeSentinel(sentinelPath); err != nil {
+		logging.Error(sshModule.Name(), "failed to write sentinel: %v", err)
+
+		return module.Result{Section: sshModule.Name(), Success: false, Error: err.Error()}
+	}
+
+	if apply {
+		if err := run.Command(ctx, "systemctl", "start", sshModule.daemon); err != nil {
+			logging.Warn(sshModule.Name(), "systemctl start %s: %v", sshModule.daemon, err)
 		}
 	}
 
-	if dryRun {
-		return module.Result{Section: sshModule.Name(), Success: true, Message: "ssh enabled (dry-run)"}
-	}
 	return module.Result{Section: sshModule.Name(), Success: true, Message: "ssh enabled"}
 }
 
@@ -114,6 +131,7 @@ func (sshModule *SSHModule) generateHostKey(ctx context.Context, keyPath string)
 	if sshModule.daemon == "dropbear" {
 		return run.Command(ctx, "dropbearkey", "-t", sshModule.keytype, "-f", keyPath)
 	}
+
 	return run.Command(ctx, "ssh-keygen", "-t", sshModule.keytype, "-f", keyPath, "-N", "")
 }
 
@@ -123,8 +141,10 @@ func writeSentinel(path string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
 		return fmt.Errorf("create services directory: %w", err)
 	}
+
 	if err := os.WriteFile(path, []byte{}, 0640); err != nil {
 		return fmt.Errorf("write sentinel %s: %w", path, err)
 	}
+
 	return nil
 }

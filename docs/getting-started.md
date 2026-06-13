@@ -100,7 +100,19 @@ Apply the configuration:
 bootconf run
 ```
 
-Check the result:
+Apply and immediately start services (users, ssh, wifi, and each enabled service):
+
+```bash
+bootconf run --apply
+```
+
+Verify the running system matches the configuration:
+
+```bash
+bootconf check
+```
+
+Check the last run result:
 
 ```bash
 bootconf status

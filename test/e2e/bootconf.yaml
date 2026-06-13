@@ -1,6 +1,6 @@
 bootconf:
   enabled: true
-  directory: /data/bootconf
+  directory: /data/config/bootconf
 
 system:
   enabled: false
@@ -103,7 +103,7 @@ templates:
 
 shell:
   enabled: true
-  directory: /data/bootconf/shell
+  directory: /data/config/bootconf/shell
   commands:
     - name: hello-world
       allow_fail: false
@@ -116,7 +116,7 @@ shell:
 
 unitrun:
   enabled: true
-  directory: /data/bootconf/scripts
+  directory: /data/config/bootconf/scripts
   firstboot: false
   units:
     - name: e2e-task

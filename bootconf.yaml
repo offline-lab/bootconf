@@ -3,7 +3,7 @@
 #
 bootconf:
   enabled: true
-  directory: /data/bootconf
+  directory: /data/config/bootconf
   order:
   - system
   - users
@@ -51,6 +51,7 @@ services:
   directory: /data/config/services
   services:
   - name: disco
+    unit: disco-daemon
     enabled: true
     sentinel: true
     default_config:
@@ -77,7 +78,7 @@ templates:
 
 shell:
   enabled: false
-  directory: /data/bootconf/shell
+  directory: /data/config/bootconf/shell
   path: "/usr/lib/framework/library:/usr/lib/framework/bin"
   commands: []
   # - name: get-process-list
@@ -92,7 +93,7 @@ shell:
 
 unitrun:
   enabled: false
-  directory: /data/bootconf/unitrun
+  directory: /data/config/bootconf/unitrun
   path: "/usr/lib/framework/library:/usr/lib/framework/bin"
   units: []
   # - name: some-name

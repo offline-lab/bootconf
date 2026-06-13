@@ -143,8 +143,11 @@ services:
   #
   # List of services to enable
   services:
-  #   # -- The name of the service to enable
+  #   # -- The name of the service (also used as the sentinel filename)
   # - name: disco
+  #   # -- The systemd unit name for health checks and systemctl start/stop.
+  #   # -- Optional: defaults to name when not set.
+  #   unit: disco-daemon
   #   # -- Enable / Disable disco-daemon at boot time
   #   enabled: true
   #   # -- Copy a sentinel file in place in services.directory (can be disabled)
@@ -208,7 +211,7 @@ shell:
   enabled: false
   #
   # The directory where sentinels are stored to only run at firstboot
-  directory: /data/bootconf/shell
+  directory: /data/config/bootconf/shell
   #
   # Prepend a directory to PATH for every command (e.g. /usr/lib/framework/bin)
   # Leave empty to inherit PATH from the environment unchanged.
@@ -239,7 +242,7 @@ unitrun:
   path: ""
   #
   # Where to save the scripts sentinel
-  directory: /data/bootconf/scripts
+  directory: /data/config/bootconf/scripts
   #
   # List of unit declarations
   units: []

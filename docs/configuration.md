@@ -61,6 +61,9 @@ services:
   directory: /etc/bootconf/services
   services:
     - name: myservice
+      # Systemd unit name for systemctl start and health checks.
+      # Optional: defaults to name when not set.
+      unit: myservice-daemon
       enabled: true
       # Write a sentinel file at <directory>/<name> when enabled.
       sentinel: true
@@ -158,7 +161,7 @@ unitrun:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | bool | `false` | If false, the tool exits immediately without running any module |
-| `directory` | string | `/data/bootconf` | Directory for status files |
+| `directory` | string | `/data/config/bootconf` | Directory for status files |
 | `order` | list | see below | Module execution order. Modules run sequentially in the listed order. Each entry must be a known module name; duplicates are rejected. Default: `system`, `users`, `wifi`, `ssh`, `services`, `files`, `templates`, `unitrun`, `shell`. |
 
 ### system
@@ -195,7 +198,8 @@ unitrun:
 |-------|------|-------------|
 | `enabled` | bool | Enable the module |
 | `directory` | string | Where sentinel files are written |
-| `services[].name` | string | Service name (used as sentinel filename) |
+| `services[].name` | string | Service name; used as the sentinel filename and display label |
+| `services[].unit` | string | Systemd unit name for `systemctl start` and health checks. Defaults to `name`. |
 | `services[].enabled` | bool | Create or remove the sentinel |
 | `services[].sentinel` | bool | Whether to manage a sentinel file |
 | `services[].default_config.copy` | bool | Copy a default config if set |

@@ -42,12 +42,14 @@ func (unitRunModule *UnitRunModule) Name() string { return "unitrun" }
 
 // Run provisions or removes each configured unit, then reloads the systemd
 // daemon once to apply all changes in a single pass.
-func (unitRunModule *UnitRunModule) Run(ctx context.Context, dryRun bool) module.Result {
+func (unitRunModule *UnitRunModule) Run(ctx context.Context, dryRun bool, _ bool) module.Result {
+
 	if !unitRunModule.enabled {
 		return module.Result{Section: unitRunModule.Name(), Success: true, Message: "unitrun disabled"}
 	}
 
 	var errs []string
+
 	for _, unit := range unitRunModule.units {
 		if !unit.Enabled {
 			if err := unitRunModule.removeUnit(ctx, unit, dryRun); err != nil {
@@ -56,6 +58,7 @@ func (unitRunModule *UnitRunModule) Run(ctx context.Context, dryRun bool) module
 			}
 			continue
 		}
+
 		if err := unitRunModule.provisionUnit(ctx, unit, dryRun); err != nil {
 			logging.Error(unitRunModule.Name(), "provision unit %q: %v", unit.Name, err)
 			errs = append(errs, err.Error())
@@ -70,6 +73,7 @@ func (unitRunModule *UnitRunModule) Run(ctx context.Context, dryRun bool) module
 
 	if len(errs) > 0 {
 		errMsg := strings.Join(errs, "; ")
+
 		return module.Result{
 			Section: unitRunModule.Name(),
 			Success: false,
@@ -81,6 +85,7 @@ func (unitRunModule *UnitRunModule) Run(ctx context.Context, dryRun bool) module
 	if dryRun {
 		return module.Result{Section: unitRunModule.Name(), Success: true, Message: fmt.Sprintf("would provision %d unit(s) (dry-run)", len(unitRunModule.units))}
 	}
+
 	return module.Result{Section: unitRunModule.Name(), Success: true, Message: fmt.Sprintf("provisioned %d unit(s)", len(unitRunModule.units))}
 }
 
@@ -90,6 +95,7 @@ func (unitRunModule *UnitRunModule) provisionUnit(ctx context.Context, unit conf
 	serviceFilePath := filepath.Join(unitRunModule.unitsDir, serviceName)
 
 	dependencies := unit.Dependencies
+
 	if unit.FirstBoot {
 		dependencies = append(dependencies, "ConditionFirstBoot=yes")
 	}
@@ -98,10 +104,13 @@ func (unitRunModule *UnitRunModule) provisionUnit(ctx context.Context, unit conf
 		logging.Info(unitRunModule.Name(), "would create directory %s (dry-run)", unitRunModule.directory)
 		logging.Info(unitRunModule.Name(), "would write script %s (dry-run)", scriptPath)
 		logging.Info(unitRunModule.Name(), "would write unit file %s (dry-run)", serviceFilePath)
+
 		if unit.FirstBoot {
 			logging.Info(unitRunModule.Name(), "would add ConditionFirstBoot=yes to %s (dry-run)", serviceName)
 		}
+
 		logging.Info(unitRunModule.Name(), "would systemctl enable %s (dry-run)", serviceName)
+
 		return nil
 	}
 
@@ -114,16 +123,19 @@ func (unitRunModule *UnitRunModule) provisionUnit(ctx context.Context, unit conf
 	if err := os.WriteFile(scriptPath, []byte("#!/bin/bash\n"+unit.Command), 0750); err != nil {
 		return fmt.Errorf("write script %s: %w", scriptPath, err)
 	}
+
 	logging.Info(unitRunModule.Name(), "wrote script %s", scriptPath)
 
 	if err := os.WriteFile(serviceFilePath, []byte(renderServiceFile(unit.Name, dependencies, scriptPath, unitRunModule.path)), 0644); err != nil {
 		return fmt.Errorf("write unit file %s: %w", serviceFilePath, err)
 	}
+
 	logging.Info(unitRunModule.Name(), "wrote unit file %s", serviceFilePath)
 
 	if err := run.Command(ctx, "systemctl", "enable", serviceName); err != nil {
 		return fmt.Errorf("systemctl enable %s: %w", serviceName, err)
 	}
+
 	logging.Info(unitRunModule.Name(), "enabled %s", serviceName)
 
 	return nil
@@ -138,6 +150,7 @@ func (unitRunModule *UnitRunModule) removeUnit(ctx context.Context, unit config.
 		logging.Info(unitRunModule.Name(), "would disable %s (dry-run)", serviceName)
 		logging.Info(unitRunModule.Name(), "would remove %s (dry-run)", serviceFilePath)
 		logging.Info(unitRunModule.Name(), "would remove %s (dry-run)", scriptPath)
+
 		return nil
 	}
 
@@ -163,20 +176,26 @@ func (unitRunModule *UnitRunModule) removeUnit(ctx context.Context, unit config.
 // the [Unit] section so callers control ordering without a separate DSL.
 func renderServiceFile(unitName string, dependencies []string, scriptPath string, extraPath string) string {
 	var sb strings.Builder
+
 	sb.WriteString("[Unit]\n")
 	fmt.Fprintf(&sb, "Description=Bootconf Unit Task %s\n", unitName)
 	sb.WriteString("DefaultDependencies=no\n")
+
 	for _, dependency := range dependencies {
 		sb.WriteString(dependency + "\n")
 	}
+
 	sb.WriteString("\n[Service]\n")
 	sb.WriteString("Type=oneshot\n")
 	sb.WriteString("RemainAfterExit=no\n")
+
 	if extraPath != "" {
 		fmt.Fprintf(&sb, "Environment=PATH=%s:/usr/sbin:/usr/bin:/sbin:/bin\n", extraPath)
 	}
+
 	fmt.Fprintf(&sb, "ExecStart=%s\n", scriptPath)
 	sb.WriteString("\n[Install]\n")
 	sb.WriteString("WantedBy=multi-user.target\n")
+
 	return sb.String()
 }

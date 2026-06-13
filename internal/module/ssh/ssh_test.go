@@ -22,7 +22,7 @@ func TestSSHEnabledCreatesSentinel(t *testing.T) {
 	}
 
 	module := New(cfg, servicesDir)
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -47,7 +47,7 @@ func TestSSHEnabledDryRun(t *testing.T) {
 	}
 
 	module := New(cfg, servicesDir)
-	result := module.Run(context.Background(), true)
+	result := module.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -83,7 +83,7 @@ func TestSSHDisabledRemovesSentinel(t *testing.T) {
 	}
 
 	module := New(cfg, servicesDir)
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -109,7 +109,7 @@ func TestSSHDisabledDryRun(t *testing.T) {
 	}
 
 	module := New(cfg, servicesDir)
-	result := module.Run(context.Background(), true)
+	result := module.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -130,7 +130,7 @@ func TestSSHInvalidDaemon(t *testing.T) {
 	}
 
 	module := New(cfg, t.TempDir())
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if result.Success {
 		t.Fatal("expected failure for invalid daemon")
@@ -151,7 +151,7 @@ func TestSSHDisabledDoesNotValidateDaemon(t *testing.T) {
 	}
 
 	module := New(cfg, servicesDir)
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success when disabled, got error: %s", result.Error)
@@ -180,7 +180,7 @@ func TestSSHExistingHostKeyNotRegenerated(t *testing.T) {
 	}
 
 	module := New(cfg, servicesDir)
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -215,7 +215,7 @@ func TestSSHEnabledNoHostKeyGeneration(t *testing.T) {
 	}
 
 	module := New(cfg, servicesDir)
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -248,7 +248,7 @@ func TestSSHSentinelDirCreated(t *testing.T) {
 	}
 
 	module := New(cfg, servicesDir)
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -280,7 +280,7 @@ func TestSSHDisabledRemovesSentinelEvenIfMissing(t *testing.T) {
 	}
 
 	module := New(cfg, servicesDir)
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success when disabled with no sentinel, got error: %s", result.Error)

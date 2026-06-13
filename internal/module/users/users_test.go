@@ -32,7 +32,7 @@ func TestUsersCreateHomeAndKeys(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -110,7 +110,7 @@ func TestUsersDisabledRemovesConfig(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -146,7 +146,7 @@ func TestUsersDryRunNoWrites(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), true)
+	result := users.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -181,7 +181,7 @@ func TestUsersMultipleUsers(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 2000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -240,7 +240,7 @@ func TestUsersNoKeys(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -283,7 +283,7 @@ func TestUsersSingleKey(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -327,7 +327,7 @@ func TestUsersMultipleKeys(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -365,7 +365,7 @@ func TestUsersDisabledSkipsCreation(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -403,7 +403,7 @@ func TestUsersModuleDisabled(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -438,7 +438,7 @@ func TestUsersSshDirPerms(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -476,7 +476,7 @@ func TestUsersAuthorizedKeysPerms(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -509,7 +509,7 @@ func TestUsersSudoTrueAddsGroupLine(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -542,7 +542,7 @@ func TestUsersSudoFalseNoGroupLine(t *testing.T) {
 		Users:       entries,
 	}
 	users := New(cfg, 1000)
-	result := users.Run(context.Background(), false)
+	result := users.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)

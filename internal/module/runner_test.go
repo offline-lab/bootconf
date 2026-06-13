@@ -12,7 +12,7 @@ type mockModule struct {
 }
 
 func (mock *mockModule) Name() string { return mock.name }
-func (mock *mockModule) Run(_ context.Context, _ bool) Result {
+func (mock *mockModule) Run(_ context.Context, _ bool, _ bool) Result {
 	return Result{Section: mock.name, Success: mock.success, Message: mock.msg}
 }
 
@@ -23,7 +23,7 @@ func TestRunnerAllSuccess(t *testing.T) {
 	}
 
 	runner := NewRunner(mods)
-	results := runner.Run(context.Background(), false, "")
+	results := runner.Run(context.Background(), false, false, "")
 
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
@@ -43,7 +43,7 @@ func TestRunnerPartialFailure(t *testing.T) {
 	}
 
 	runner := NewRunner(mods)
-	results := runner.Run(context.Background(), false, "")
+	results := runner.Run(context.Background(), false, false, "")
 
 	if len(results) != 3 {
 		t.Fatalf("expected 3 results, got %d", len(results))
@@ -67,7 +67,7 @@ func TestRunnerSingleSection(t *testing.T) {
 	}
 
 	runner := NewRunner(mods)
-	results := runner.Run(context.Background(), false, "ssh")
+	results := runner.Run(context.Background(), false, false, "ssh")
 
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
@@ -79,7 +79,7 @@ func TestRunnerSingleSection(t *testing.T) {
 
 func TestRunnerEmpty(t *testing.T) {
 	runner := NewRunner(nil)
-	results := runner.Run(context.Background(), false, "")
+	results := runner.Run(context.Background(), false, false, "")
 
 	if len(results) != 0 {
 		t.Fatalf("expected 0 results, got %d", len(results))

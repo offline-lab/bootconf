@@ -44,7 +44,7 @@ func New(cfg config.UsersConfig, uidStart int) *UsersModule {
 func (usersModule *UsersModule) Name() string { return "users" }
 
 // Run provisions or removes user accounts based on config entries.
-func (usersModule *UsersModule) Run(ctx context.Context, dryRun bool) module.Result {
+func (usersModule *UsersModule) Run(ctx context.Context, dryRun bool, apply bool) module.Result {
 	if !usersModule.enabled {
 		return module.Result{Section: usersModule.Name(), Success: true, Message: "users disabled"}
 	}
@@ -62,9 +62,10 @@ func (usersModule *UsersModule) Run(ctx context.Context, dryRun bool) module.Res
 
 		uid := usersModule.uidStart + index
 
-		if err := usersModule.provisionUser(ctx, entry, uid, dryRun); err != nil {
+		if err := usersModule.provisionUser(ctx, entry, uid, dryRun, apply); err != nil {
 			errMsg := fmt.Sprintf("user %q: %v", entry.Name, err)
 			logging.Error(usersModule.Name(), "%s", errMsg)
+
 			return module.Result{Section: usersModule.Name(), Success: false, Error: errMsg}
 		}
 	}
@@ -74,11 +75,13 @@ func (usersModule *UsersModule) Run(ctx context.Context, dryRun bool) module.Res
 
 func (usersModule *UsersModule) teardownUser(ctx context.Context, name string) {
 	sysusersConf := filepath.Join(usersModule.usersDir, name+".conf")
+
 	if err := os.Remove(sysusersConf); err != nil && !os.IsNotExist(err) {
 		logging.Warn(usersModule.Name(), "failed to remove sysusers config %s: %v", sysusersConf, err)
 	}
 
 	tmpfilesConf := filepath.Join(usersModule.tmpfilesDir, name+".conf")
+
 	if err := os.Remove(tmpfilesConf); err != nil && !os.IsNotExist(err) {
 		logging.Warn(usersModule.Name(), "failed to remove tmpfiles config %s: %v", tmpfilesConf, err)
 	}
@@ -91,14 +94,16 @@ func (usersModule *UsersModule) teardownUser(ctx context.Context, name string) {
 	if err := run.Command(ctx, "gpasswd", "-d", name, "sudo"); err != nil {
 		logging.Warn(usersModule.Name(), "failed to remove %q from sudo group: %v", name, err)
 	}
+
 	if err := run.Command(ctx, "userdel", name); err != nil {
 		logging.Warn(usersModule.Name(), "failed to delete user %q: %v", name, err)
 	}
 }
 
-func (usersModule *UsersModule) provisionUser(ctx context.Context, entry config.UserEntry, uid int, dryRun bool) error {
+func (usersModule *UsersModule) provisionUser(ctx context.Context, entry config.UserEntry, uid int, dryRun bool, apply bool) error {
 	sysusersConf := filepath.Join(usersModule.usersDir, entry.Name+".conf")
 	sysusersLine := fmt.Sprintf("u %s %d \"%s\" %s /bin/bash\n", entry.Name, uid, entry.Name, entry.Home)
+
 	if entry.Sudo {
 		sysusersLine += fmt.Sprintf("m %s sudo\n", entry.Name)
 	}
@@ -112,12 +117,23 @@ func (usersModule *UsersModule) provisionUser(ctx context.Context, entry config.
 	if dryRun {
 		logging.Info(usersModule.Name(), "would create users dir %s (dry-run)", usersModule.usersDir)
 		logging.Info(usersModule.Name(), "would write sysusers config %s (dry-run)", sysusersConf)
+
+		if apply {
+			logging.Info(usersModule.Name(), "would run systemd-sysusers %s (dry-run)", sysusersConf)
+		}
+
 		logging.Info(usersModule.Name(), "would write tmpfiles config %s (dry-run)", tmpfilesConf)
-		logging.Info(usersModule.Name(), "would run systemd-tmpfiles --create %s (dry-run)", tmpfilesConf)
+
+		if apply {
+			logging.Info(usersModule.Name(), "would run systemd-tmpfiles --create %s (dry-run)", tmpfilesConf)
+		}
+
 		logging.Info(usersModule.Name(), "would create .ssh dir %s (dry-run)", sshDir)
+
 		if len(entry.AuthorizedKeys) > 0 {
 			logging.Info(usersModule.Name(), "would write %d authorized key(s) to %s (dry-run)", len(entry.AuthorizedKeys), keysPath)
 		}
+
 		return nil
 	}
 
@@ -131,6 +147,12 @@ func (usersModule *UsersModule) provisionUser(ctx context.Context, entry config.
 		return fmt.Errorf("write sysusers config %s: %w", sysusersConf, err)
 	}
 
+	if apply {
+		if err := run.Command(ctx, "systemd-sysusers", sysusersConf); err != nil {
+			logging.Warn(usersModule.Name(), "systemd-sysusers %s failed: %v", sysusersConf, err)
+		}
+	}
+
 	if err := os.MkdirAll(usersModule.tmpfilesDir, 0750); err != nil {
 		return fmt.Errorf("create tmpfiles dir %s: %w", usersModule.tmpfilesDir, err)
 	}
@@ -139,8 +161,10 @@ func (usersModule *UsersModule) provisionUser(ctx context.Context, entry config.
 		return fmt.Errorf("write tmpfiles config %s: %w", tmpfilesConf, err)
 	}
 
-	if err := run.Command(ctx, "systemd-tmpfiles", "--create", tmpfilesConf); err != nil {
-		logging.Warn(usersModule.Name(), "systemd-tmpfiles --create %s failed: %v", tmpfilesConf, err)
+	if apply {
+		if err := run.Command(ctx, "systemd-tmpfiles", "--create", tmpfilesConf); err != nil {
+			logging.Warn(usersModule.Name(), "systemd-tmpfiles --create %s failed: %v", tmpfilesConf, err)
+		}
 	}
 
 	if err := os.Chown(entry.Home, uid, uid); err != nil {
@@ -150,15 +174,18 @@ func (usersModule *UsersModule) provisionUser(ctx context.Context, entry config.
 	if err := os.MkdirAll(sshDir, 0700); err != nil {
 		return fmt.Errorf("create .ssh dir %s: %w", sshDir, err)
 	}
+
 	if err := os.Chown(sshDir, uid, uid); err != nil {
 		logging.Warn(usersModule.Name(), "failed to chown %s to uid %d: %v", sshDir, uid, err)
 	}
 
 	if len(entry.AuthorizedKeys) > 0 {
 		keysContent := strings.Join(entry.AuthorizedKeys, "\n") + "\n"
+
 		if err := os.WriteFile(keysPath, []byte(keysContent), 0600); err != nil {
 			return fmt.Errorf("write authorized_keys %s: %w", keysPath, err)
 		}
+
 		if err := os.Chown(keysPath, uid, uid); err != nil {
 			logging.Warn(usersModule.Name(), "failed to chown %s to uid %d: %v", keysPath, uid, err)
 		}

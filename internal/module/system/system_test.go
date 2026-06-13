@@ -17,7 +17,7 @@ func TestSystemDisabled(t *testing.T) {
 	}
 
 	module := New(cfg, statusDir)
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -37,7 +37,7 @@ func TestSystemDryRun(t *testing.T) {
 	}
 
 	module := New(cfg, statusDir)
-	result := module.Run(context.Background(), true)
+	result := module.Run(context.Background(), true, false)
 
 	if result.Section != "system" {
 		t.Errorf("expected section system, got %s", result.Section)
@@ -55,7 +55,7 @@ func TestSystemNothingToConfigure(t *testing.T) {
 	}
 
 	module := New(cfg, statusDir)
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -74,7 +74,7 @@ func TestSystemHostnameOnly(t *testing.T) {
 	}
 
 	module := New(cfg, statusDir)
-	result := module.Run(context.Background(), true)
+	result := module.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -90,7 +90,7 @@ func TestSystemTimezoneOnly(t *testing.T) {
 	}
 
 	module := New(cfg, statusDir)
-	result := module.Run(context.Background(), true)
+	result := module.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -107,7 +107,7 @@ func TestSystemDryRunNoExecute(t *testing.T) {
 	}
 
 	module := New(cfg, statusDir)
-	result := module.Run(context.Background(), true)
+	result := module.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -125,7 +125,7 @@ func TestSystemStatusDirNotWritable(t *testing.T) {
 	}
 
 	module := New(cfg, "/nonexistent/path")
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if result.Success {
 		t.Fatal("expected failure for non-writable status dir")
@@ -143,7 +143,7 @@ func TestSystemDisabledIgnoresUnwritableDir(t *testing.T) {
 	}
 
 	module := New(cfg, "/nonexistent/path")
-	result := module.Run(context.Background(), false)
+	result := module.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success when disabled even with unwritable dir, got error: %s", result.Error)

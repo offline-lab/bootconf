@@ -19,6 +19,7 @@ import (
 
 var (
 	dryRun     bool
+	applyMode  bool
 	runSection string
 )
 
@@ -37,6 +38,7 @@ func runBootconf(_ *cobra.Command, _ []string) {
 	}
 
 	cfg, err := config.Load(configPath)
+
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -65,17 +67,17 @@ func runBootconf(_ *cobra.Command, _ []string) {
 
 	_, _ = daemon.SdNotify(false, "STATUS=Applying boot configuration")
 
-	modules := registry.Build(cfg)
-
-	ctx := context.Background()
-	start := time.Now()
-	results := module.NewRunner(modules).Run(ctx, dryRun, runSection)
+	modules       := registry.Build(cfg)
+	ctx           := context.Background()
+	start         := time.Now()
+	results       := module.NewRunner(modules).Run(ctx, dryRun, applyMode, runSection)
 	totalDuration := time.Since(start)
+	overall       := writeRunStatus(cfg.Bootconf.Directory, results)
 
-	overall := writeRunStatus(cfg.Bootconf.Directory, results)
 	if isTerminal() {
 		printResults(results, dryRun, totalDuration)
 	}
+
 	if !overall {
 		os.Exit(1)
 	}
@@ -85,11 +87,13 @@ func runBootconf(_ *cobra.Command, _ []string) {
 
 func writeRunStatus(statusDir string, results []module.Result) bool {
 	overall := true
+
 	for _, result := range results {
 		if !result.Success {
 			overall = false
 		}
 	}
+
 	if err := status.Write(statusDir, &status.RunStatus{
 		Timestamp: time.Now().UTC(),
 		Overall:   overall,
@@ -97,6 +101,7 @@ func writeRunStatus(statusDir string, results []module.Result) bool {
 	}); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: failed to write status: %v\n", err)
 	}
+
 	return overall
 }
 
@@ -107,24 +112,29 @@ func printResults(results []module.Result, dryRun bool, totalDuration time.Durat
 	}
 
 	statusLabel := "OK"
+
 	if dryRun {
 		statusLabel = "DRY-RUN"
 	}
 
 	table := output.NewTable("Section", "Status", "Detail")
+
 	for _, result := range results {
 		sectionLabel := statusLabel
+
 		if !result.Success {
 			sectionLabel = "FAIL"
 		}
 
 		detail := result.Message
+
 		if !result.Success {
 			detail = result.Error
 		}
 
 		table.AddRow(result.Section, sectionLabel, detail)
 	}
+
 	table.Render()
 
 	fmt.Printf("\n%d section(s) completed in %s\n", len(results), totalDuration.Round(time.Microsecond))
@@ -132,13 +142,16 @@ func printResults(results []module.Result, dryRun bool, totalDuration time.Durat
 
 func isTerminal() bool {
 	fi, err := os.Stdout.Stat()
+
 	if err != nil {
 		return false
 	}
+
 	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 func init() {
 	runCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be done without making changes")
+	runCmd.Flags().BoolVar(&applyMode, "apply", false, "Start services after writing configuration files")
 	runCmd.Flags().StringVar(&runSection, "section", "", "Only run a specific section")
 }

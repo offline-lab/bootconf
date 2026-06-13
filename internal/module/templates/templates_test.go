@@ -20,7 +20,7 @@ func writeTemplate(t *testing.T, dir, name, content string) string {
 }
 
 func TestTemplatesDisabled(t *testing.T) {
-	result := New(config.TemplatesConfig{Enabled: false}).Run(context.Background(), false)
+	result := New(config.TemplatesConfig{Enabled: false}).Run(context.Background(), false, false)
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
 	}
@@ -40,7 +40,7 @@ func TestTemplatesDryRunNoWrites(t *testing.T) {
 		Templates: []config.TemplateEntry{
 			{Source: sourcePath, Destination: destPath, Variables: map[string]string{"name": "world"}, Chmod: "640"},
 		},
-	}).Run(context.Background(), true)
+	}).Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
@@ -66,7 +66,7 @@ func TestTemplatesRender(t *testing.T) {
 				Chmod:       "640",
 			},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got: %s", result.Error)
@@ -97,7 +97,7 @@ func TestTemplatesExistingDestGetsNewSuffix(t *testing.T) {
 		Templates: []config.TemplateEntry{
 			{Source: sourcePath, Destination: destPath, Variables: map[string]string{"val": "new"}, Chmod: "640"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	if _, err := os.Stat(destPath + ".new"); err != nil {
 		t.Errorf("expected dest.new to exist: %v", err)
@@ -119,7 +119,7 @@ func TestTemplatesMissingKeyError(t *testing.T) {
 		Templates: []config.TemplateEntry{
 			{Source: sourcePath, Destination: destPath, Variables: map[string]string{"other": "x"}, Chmod: "640"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	if result.Success {
 		t.Fatal("expected failure for missing template key")
@@ -137,7 +137,7 @@ func TestTemplatesParseError(t *testing.T) {
 		Templates: []config.TemplateEntry{
 			{Source: sourcePath, Destination: destPath, Variables: map[string]string{}, Chmod: "640"},
 		},
-	}).Run(context.Background(), false)
+	}).Run(context.Background(), false, false)
 
 	if result.Success {
 		t.Fatal("expected failure for invalid template syntax")
@@ -156,7 +156,7 @@ func TestTemplatesDryRunCatchesMissingKey(t *testing.T) {
 		Templates: []config.TemplateEntry{
 			{Source: sourcePath, Destination: destPath, Variables: map[string]string{}, Chmod: "640"},
 		},
-	}).Run(context.Background(), true)
+	}).Run(context.Background(), true, false)
 
 	if result.Success {
 		t.Fatal("dry-run should still catch missing key errors")

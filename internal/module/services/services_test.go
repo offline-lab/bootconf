@@ -23,7 +23,7 @@ func TestServicesEnableCreatesSentinel(t *testing.T) {
 	}
 
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -55,7 +55,7 @@ func TestServicesDisableRemovesSentinel(t *testing.T) {
 		},
 	}
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -79,7 +79,7 @@ func TestServicesSentinelFalseNoFile(t *testing.T) {
 	}
 
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -112,7 +112,7 @@ func TestServicesDisabledSentinelFalseNoRemove(t *testing.T) {
 	}
 
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -158,7 +158,7 @@ func TestServicesCopyDefaultConfig(t *testing.T) {
 	}
 
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -212,7 +212,7 @@ func TestServicesCopyExistingFileGetsNewSuffix(t *testing.T) {
 		},
 	}
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -259,7 +259,7 @@ func TestServicesCopyMissingSource(t *testing.T) {
 	}
 
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if result.Success {
 		t.Fatal("expected failure when source file is missing")
@@ -300,7 +300,7 @@ func TestServicesDryRunNoWrites(t *testing.T) {
 	}
 
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), true)
+	result := svc.Run(context.Background(), true, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -325,7 +325,7 @@ func TestServicesEmptyList(t *testing.T) {
 	}
 	svc := New(svcConfig)
 
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -348,7 +348,7 @@ func TestServicesModuleDisabled(t *testing.T) {
 	}
 
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success when module disabled, got error: %s", result.Error)
@@ -386,7 +386,7 @@ func TestServicesMultipleServices(t *testing.T) {
 	}
 
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -456,7 +456,7 @@ func TestServicesMultipleEnabledWithCopy(t *testing.T) {
 	}
 
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)
@@ -518,7 +518,7 @@ func TestServicesCopyCreatesDestinationDir(t *testing.T) {
 	}
 
 	svc := New(svcConfig)
-	result := svc.Run(context.Background(), false)
+	result := svc.Run(context.Background(), false, false)
 
 	if !result.Success {
 		t.Fatalf("expected success, got error: %s", result.Error)

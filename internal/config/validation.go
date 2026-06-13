@@ -18,6 +18,7 @@ var (
 // validateSafePath prevents path traversal by ensuring paths are absolute and
 // free of ".." components that could escape intended directories.
 func validateSafePath(path, fieldName string) error {
+
 	if !strings.HasPrefix(path, "/") {
 		return fmt.Errorf("%s must be an absolute path, got %q", fieldName, path)
 	}
@@ -32,6 +33,7 @@ func validateSafePath(path, fieldName string) error {
 // validateSafeName rejects names that could break shell quoting, file system
 // operations, or systemd unit names by enforcing a strict alphanumeric pattern.
 func validateSafeName(name, fieldName string) error {
+
 	if !safeNamePattern.MatchString(name) {
 		return fmt.Errorf("%s %q must match ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$", fieldName, name)
 	}
@@ -69,6 +71,7 @@ func (cfg *Config) Validate() error {
 // points to a real location on disk when the section is active.
 // Order validation (unknown/duplicate names) is handled by registry.Validate.
 func (cfg *Config) validateBootconf() error {
+
 	if !cfg.Bootconf.Enabled {
 		return nil
 	}
@@ -83,6 +86,7 @@ func (cfg *Config) validateBootconf() error {
 // validateSystem guards against misconfigured hostnames that would break
 // mDNS, DHCP, or TLS certificate matching at runtime.
 func (cfg *Config) validateSystem() error {
+
 	if !cfg.System.Enabled {
 		return nil
 	}
@@ -105,6 +109,7 @@ func (cfg *Config) validateSystem() error {
 // validateHostname enforces RFC 1123 so the device can reliably participate
 // in DNS and mDNS without resolution failures.
 func validateHostname(hostname string) error {
+
 	if len(hostname) > 253 {
 		return fmt.Errorf("system.hostname must be at most 253 characters")
 	}
@@ -119,6 +124,7 @@ func validateHostname(hostname string) error {
 // validateTimezone restricts characters to prevent injection through the
 // timezone string when it is written into system configuration files.
 func validateTimezone(timezone string) error {
+
 	if !timezonePattern.MatchString(timezone) {
 		return fmt.Errorf("system.timezone %q contains invalid characters", timezone)
 	}
@@ -129,6 +135,7 @@ func validateTimezone(timezone string) error {
 // validateSSH prevents insecure or unsupported SSH daemon and key type
 // selections that could leave the device with weak remote access.
 func (cfg *Config) validateSSH() error {
+
 	if !cfg.SSH.Enabled {
 		return nil
 	}
@@ -155,6 +162,7 @@ func (cfg *Config) validateSSH() error {
 // validateWifi ensures wireless credentials and regulatory settings are
 // complete and well-formed so the device can associate on first boot.
 func (cfg *Config) validateWifi() error {
+
 	if !cfg.Wifi.Enabled {
 		return nil
 	}
@@ -168,12 +176,15 @@ func (cfg *Config) validateWifi() error {
 	}
 
 	var missing []string
+
 	if cfg.Wifi.SSID == "" {
 		missing = append(missing, "ssid")
 	}
+
 	if cfg.Wifi.PasswordHash == "" {
 		missing = append(missing, "password_hash")
 	}
+
 	if cfg.Wifi.Country == "" {
 		missing = append(missing, "country")
 	}
@@ -196,6 +207,7 @@ func (cfg *Config) validateWifi() error {
 // validateSSID blocks control characters and quotes that could break
 // wpa_supplicant or hostapd configuration file parsing.
 func validateSSID(ssid string) error {
+
 	for _, character := range ssid {
 		if character < 32 || character > 126 || character == '"' || character == '\\' {
 			return fmt.Errorf("wifi.ssid contains invalid characters")
@@ -212,6 +224,7 @@ func validateSSID(ssid string) error {
 // validatePasswordHash ensures the stored hash is a full SHA-256 hex digest,
 // preventing truncated or malformed hashes from being written to config files.
 func validatePasswordHash(hash string) error {
+
 	if !hexHashPattern.MatchString(hash) {
 		return fmt.Errorf("wifi.password_hash must be exactly 64 hexadecimal characters")
 	}
@@ -222,6 +235,7 @@ func validatePasswordHash(hash string) error {
 // validateCountryCode enforces ISO 3166-1 alpha-2 format so the regulatory
 // domain is accepted by the wireless regulatory database.
 func validateCountryCode(code string) error {
+
 	if !countryPattern.MatchString(code) {
 		return fmt.Errorf("wifi.country must be a 2-letter uppercase ISO 3166-1 code")
 	}
@@ -232,6 +246,7 @@ func validateCountryCode(code string) error {
 // validateServices checks that every enabled service has a valid name and
 // that copy-config directives reference safe, absolute paths on disk.
 func (cfg *Config) validateServices() error {
+
 	if !cfg.Services.Enabled {
 		return nil
 	}
@@ -269,6 +284,7 @@ func (cfg *Config) validateServices() error {
 // both source and destination paths are present and safe to use on the
 // target filesystem, preventing traversal outside intended directories.
 func validateServiceCopyConfig(service ServiceEntry, index int) error {
+
 	if !service.DefaultConfig.Copy {
 		return nil
 	}
@@ -291,6 +307,7 @@ func validateServiceCopyConfig(service ServiceEntry, index int) error {
 // validateUsers ensures every enabled user has a safe name and home directory,
 // preventing privilege escalation through malformed usernames or path traversal.
 func (cfg *Config) validateUsers() error {
+
 	if !cfg.Users.Enabled {
 		return nil
 	}
@@ -346,6 +363,7 @@ func IsValidUsername(name string) bool {
 // misinterpreted by useradd, shadow-utils, or shell expansion, preventing
 // both injection and interoperability issues across Linux distributions.
 func validateUsername(name string) error {
+
 	if len(name) == 0 {
 		return fmt.Errorf("must not be empty")
 	}
@@ -371,6 +389,7 @@ func validateUsername(name string) error {
 // validateFiles ensures every file entry has a valid source or content (not
 // both, not neither), and that all paths are absolute and traversal-free.
 func (cfg *Config) validateFiles() error {
+
 	if !cfg.Files.Enabled {
 		return nil
 	}
@@ -379,17 +398,21 @@ func (cfg *Config) validateFiles() error {
 		if file.Source == "" && file.Content == "" {
 			return fmt.Errorf("files[%d]: source or content is required", index)
 		}
+
 		if file.Source != "" && file.Content != "" {
 			return fmt.Errorf("files[%d]: source and content are mutually exclusive", index)
 		}
+
 		if file.Source != "" {
 			if err := validateSafePath(file.Source, fmt.Sprintf("files[%d].source", index)); err != nil {
 				return err
 			}
 		}
+
 		if file.Destination == "" {
 			return fmt.Errorf("files[%d]: destination is required", index)
 		}
+
 		if err := validateSafePath(file.Destination, fmt.Sprintf("files[%d].destination", index)); err != nil {
 			return err
 		}
@@ -401,6 +424,7 @@ func (cfg *Config) validateFiles() error {
 // validateTemplates ensures every template entry has valid source and
 // destination paths so the render step cannot write to arbitrary locations.
 func (cfg *Config) validateTemplates() error {
+
 	if !cfg.Templates.Enabled {
 		return nil
 	}
@@ -409,12 +433,15 @@ func (cfg *Config) validateTemplates() error {
 		if entry.Source == "" {
 			return fmt.Errorf("templates[%d]: source is required", index)
 		}
+
 		if err := validateSafePath(entry.Source, fmt.Sprintf("templates[%d].source", index)); err != nil {
 			return err
 		}
+
 		if entry.Destination == "" {
 			return fmt.Errorf("templates[%d]: destination is required", index)
 		}
+
 		if err := validateSafePath(entry.Destination, fmt.Sprintf("templates[%d].destination", index)); err != nil {
 			return err
 		}
@@ -426,63 +453,80 @@ func (cfg *Config) validateTemplates() error {
 // validateShell ensures every command has a unique safe name and non-empty
 // command body. Names are used as filenames for log and sentinel files.
 func (cfg *Config) validateShell() error {
+
 	if !cfg.Shell.Enabled {
 		return nil
 	}
+
 	if cfg.Shell.Directory == "" {
 		return fmt.Errorf("shell.directory is required when shell is enabled")
 	}
+
 	if err := validateSafePath(cfg.Shell.Directory, "shell.directory"); err != nil {
 		return err
 	}
+
 	if containsNewline(cfg.Shell.Path) {
 		return fmt.Errorf("shell.path must not contain newline characters")
 	}
+
 	for index, command := range cfg.Shell.Commands {
 		if command.Name == "" {
 			return fmt.Errorf("shell.commands[%d]: name is required", index)
 		}
+
 		if err := validateSafeName(command.Name, fmt.Sprintf("shell.commands[%d].name", index)); err != nil {
 			return err
 		}
+
 		if command.Command == "" {
 			return fmt.Errorf("shell.commands[%d]: command is required", index)
 		}
 	}
+
 	return nil
 }
 
 // validateUnitRun ensures every enabled unit has a safe name and non-empty
 // command body. Names are used as script filenames and systemd unit names.
 func (cfg *Config) validateUnitRun() error {
+
 	if !cfg.UnitRun.Enabled {
 		return nil
 	}
+
 	if cfg.UnitRun.Directory == "" {
 		return fmt.Errorf("unitrun.directory is required when unitrun is enabled")
 	}
+
 	if err := validateSafePath(cfg.UnitRun.Directory, "unitrun.directory"); err != nil {
 		return err
 	}
+
 	if containsNewline(cfg.UnitRun.Path) {
 		return fmt.Errorf("unitrun.path must not contain newline characters")
 	}
+
 	for index, unit := range cfg.UnitRun.Units {
 		if unit.Name == "" {
 			return fmt.Errorf("unitrun.units[%d]: name is required", index)
 		}
+
 		if err := validateSafeName(unit.Name, fmt.Sprintf("unitrun.units[%d].name", index)); err != nil {
 			return err
 		}
+
 		if unit.Enabled && unit.Command == "" {
 			return fmt.Errorf("unitrun.units[%d] %q: command is required when enabled", index, unit.Name)
 		}
+
 		for depIndex, dep := range unit.Dependencies {
 			if containsNewline(dep) {
 				return fmt.Errorf("unitrun.units[%d].dependencies[%d] must not contain newline characters", index, depIndex)
 			}
 		}
 	}
+
 	return nil
 }
 

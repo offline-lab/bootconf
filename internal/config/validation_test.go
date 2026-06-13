@@ -6,7 +6,7 @@ func validConfig() *Config {
 	return &Config{
 		Bootconf: BootconfConfig{
 			Enabled:   true,
-			Directory: "/data/bootconf",
+			Directory: "/data/config/bootconf",
 		},
 		System: SystemConfig{
 			Enabled:  true,
@@ -187,7 +187,7 @@ func TestValidateUsersDirectoryRequired(t *testing.T) {
 
 func TestValidateMinimalConfigWifiOnly(t *testing.T) {
 	cfg := &Config{
-		Bootconf: BootconfConfig{Enabled: true, Directory: "/data/bootconf"},
+		Bootconf: BootconfConfig{Enabled: true, Directory: "/data/config/bootconf"},
 		Wifi: WifiConfig{
 			Enabled:      true,
 			Directory:    "/data/config/wifi",
@@ -227,7 +227,7 @@ func TestValidateEmptyConfigPasses(t *testing.T) {
 
 func TestValidateSSHDisabledSkipsDaemonKeytypeValidation(t *testing.T) {
 	cfg := &Config{
-		Bootconf: BootconfConfig{Enabled: true, Directory: "/data/bootconf"},
+		Bootconf: BootconfConfig{Enabled: true, Directory: "/data/config/bootconf"},
 		SSH:      SSHConfig{Enabled: false, Daemon: "nonsense", Keytype: "garbage"},
 	}
 	cfg.SetDefaults()
@@ -238,7 +238,7 @@ func TestValidateSSHDisabledSkipsDaemonKeytypeValidation(t *testing.T) {
 
 func TestValidateDisabledSectionsWithGarbageFields(t *testing.T) {
 	cfg := &Config{
-		Bootconf: BootconfConfig{Enabled: true, Directory: "/data/bootconf"},
+		Bootconf: BootconfConfig{Enabled: true, Directory: "/data/config/bootconf"},
 		Wifi:     WifiConfig{Enabled: false, SSID: "", PasswordHash: "bad", Country: "XX"},
 		Services: ServicesConfig{Enabled: false, Directory: ""},
 		Users:    UsersConfig{Enabled: false, Directory: ""},

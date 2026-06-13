@@ -85,7 +85,7 @@ entirely during validation and execution.
 `/boot/firmware/bootconf.yaml`
 : Default configuration file path.
 
-`/data/bootconf/.bootconf/status.json`
+`/data/config/bootconf/.bootconf/status.json`
 : JSON status file from the last run.
 
 # EXAMPLES
