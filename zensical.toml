@@ -1,38 +1,37 @@
 [project]
 
-site_name = "bootconf"
+site_name        = "bootconf"
 site_description = "Declarative boot configuration for Linux."
-site_author = "Offline Lab"
-site_url = "https://bootconf.offline-lab.com"
-home_page_url = "https://bootconf.offline-lab.com"
+site_author      = "Offline Lab"
+site_url         = "https://bootconf.offline-lab.com"
+home_page_url    = "https://bootconf.offline-lab.com"
+copyright        = "Copyright &copy; 2026 Offline Lab"
 
-copyright = "Copyright &copy; 2026 Offline Lab"
-
-repo_name = "offline-lab/bootconf"
-repo_url  = "https://github.com/offline-lab/bootconf"
-edit_uri  = "https://github.com/offline-lab/bootconf/edit/main/docs/"
-docs_dir = "docs"
-site_dir = "docs/public"
+repo_name        = "offline-lab/bootconf"
+repo_url         = "https://github.com/offline-lab/bootconf"
+edit_uri         = "https://github.com/offline-lab/bootconf/edit/main/docs/"
+site_dir         = "docs/public"
+docs_dir         = "docs"
 
 nav = [
-  { "Home" = "index.md" },
+  { "Home"            = "index.md" },
   { "Getting Started" = "getting-started.md" },
-  { "Configuration" = "configuration.md" },
+  { "Configuration"   = "configuration.md" },
   { "Modules" = [
-    { "System" = "modules/system.md" },
-    { "SSH" = "modules/ssh.md" },
-    { "WiFi" = "modules/wifi.md" },
-    { "Services" = "modules/services.md" },
-    { "Users" = "modules/users.md" },
-    { "Files" = "modules/files.md" },
+    { "System"    = "modules/system.md" },
+    { "SSH"       = "modules/ssh.md" },
+    { "WiFi"      = "modules/wifi.md" },
+    { "Services"  = "modules/services.md" },
+    { "Users"     = "modules/users.md" },
+    { "Files"     = "modules/files.md" },
     { "Templates" = "modules/templates.md" },
-    { "Shell" = "modules/shell.md" },
-    { "UnitRun" = "modules/unitrun.md" },
+    { "Shell"     = "modules/shell.md" },
+    { "UnitRun"   = "modules/unitrun.md" },
   ]},
 ]
 
 [project.theme]
-language = "en"
+language   = "en"
 custom_dir = "docs/overrides"
 features = [
     "content.code.copy",
@@ -49,12 +48,12 @@ features = [
 ]
 
 [[project.theme.palette]]
-scheme = "default"
+scheme      = "default"
 toggle.icon = "lucide/sun"
 toggle.name = "Switch to dark mode"
 
 [[project.theme.palette]]
-scheme = "slate"
+scheme      = "slate"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to light mode"
 
